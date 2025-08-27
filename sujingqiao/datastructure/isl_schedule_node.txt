@@ -1,0 +1,233 @@
+非常好！你提供的是一组 **ISL 调度树节点（`isl_schedule_node`）** 的操作接口，它们是 ISL 中用于**构建、变换和优化调度树（Schedule Tree）** 的核心 API。
+
+我们将这些接口按 **逻辑功能分组**，每组对应一种**调度变换操作**，并详细注释每个接口的作用。最后，用一个**综合示例**展示如何使用这些接口实现 **循环分块（Tiling） + 融合（Fusion）**。
+
+---
+
+## 📚 分组说明
+
+我们将接口分为 **6 大类**，每类对应一种调度树变换逻辑：
+
+---
+
+### 🔹 分组 1：**节点构造与树操作**
+
+> 创建、插入、提取调度树节点。
+
+| 接口 | 说明 |
+|------|------|
+| `struct isl_schedule_node { ... }` | 调度树节点结构体：<br>• `schedule`: 所属调度<br>• `tree`: 当前节点的子树<br>• `ancestors`: 祖先路径<br>• `child_pos`: 在父节点中的位置索引<br>• `ref`: 引用计数 |
+| `__isl_give isl_schedule_node *isl_schedule_node_alloc(...)` | 手动构造一个调度节点（通常不直接使用，由 ISL 内部管理）。 |
+| `__isl_give isl_schedule_node *isl_schedule_node_graft_tree(...)` | 将一棵新的调度树“嫁接”到当前节点位置，替换原树。用于插入自定义调度结构。 |
+| `__isl_give isl_schedule_tree *isl_schedule_node_get_tree(__isl_keep isl_schedule_node *node);` | 获取当前节点对应的调度子树（`isl_schedule_tree`），用于分析或修改。 |
+
+> ✅ **用途**：构建或替换调度树的某一部分。
+
+---
+
+### 🔹 分组 2：**域变换（Domain Transformation）**
+
+> 修改调度节点所作用的迭代域。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_schedule_node *isl_schedule_node_domain_intersect_domain(...)` | 将当前节点的域与给定集合 `domain` 取交集。用于限制调度作用范围（如只对 `i < N/2` 应用某优化）。 |
+| `__isl_give isl_schedule_node *isl_schedule_node_domain_gist_params(...)` | 在参数上下文 `context` 下简化当前节点的域（去冗余）。例如已知 `N > 0`，可简化 `i < N`。 |
+
+> ✅ **用途**：条件优化、参数化调度。
+
+---
+
+### 🔹 分组 3：**扩展与收缩（Expansion & Contraction）**
+
+> 实现分块（tiling）、向量化等需要“嵌套变换”的操作。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_schedule_node *isl_schedule_node_expand(...)` | 在当前节点插入一个“扩展”变换：<br>• `contraction`: 从块索引到原始索引的映射（如 `i = 32*ii + j`）<br>• `domain`: 块域（如 `{ ii : 0 <= ii < ceil(N/32) }`）<br>• `tree`: 块内调度树<br>→ 生成分块循环。 |
+| `__isl_give isl_schedule_node *isl_schedule_node_insert_expansion(...)` | 插入一个“扩展”节点（不替换子树），常用于向量化（vector lane 扩展）。 |
+| `__isl_give isl_schedule_node *isl_schedule_node_insert_extension(...)` | 插入一个“扩展”映射（extension），用于非仿射扩展或通信建模。 |
+
+> ✅ **用途**：循环分块、向量化、分布式内存映射。
+
+---
+
+### 🔹 分组 4：**拉回变换（Pullback）**
+
+> 将调度“拉回”到另一个空间，常用于函数调用或映射变换。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_schedule_node *isl_schedule_node_pullback_union_pw_multi_aff(...)` | 将当前调度节点的执行时间映射“拉回”通过一个分段仿射映射 `upma`。<br>例如：原调度 `S[i] -> [i]`，`upma: j -> 2*j`，则新调度 `S[2*j] -> [2*j]`。 |
+
+> ✅ **用途**：重索引（reindexing）、函数内联后的调度调整。
+
+---
+
+### 🔹 分组 5：**上下文简化（Gist）**
+
+> 在给定上下文下去除调度中的冗余信息。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_schedule_node *isl_schedule_node_gist(...)` | 在上下文 `context`（`isl_union_set`）下简化当前节点的调度约束。例如已知 `i % 32 == 0`，则 `i < 32` 可简化为 `i == 0`。 |
+
+> ✅ **用途**：优化调度表达式，提高可读性和执行效率。
+
+---
+
+### 🔹 分组 6：**组合式调度构建**
+
+> 组合多个操作实现高级优化。
+
+| 接口 | 说明 |
+|------|------|
+| 所有以上接口 | 可组合使用：<br>1. `expand` 实现分块<br>2. `pullback` 重索引<br>3. `gist` 简化<br>4. `graft_tree` 插入自定义结构 |
+
+> ✅ **用途**：构建复杂调度策略（如分块 + 并行 + 向量化）。
+
+---
+
+## 🧩 综合示例：**2D 循环分块（Tiling）**
+
+我们要对以下循环进行 **32x32 分块**：
+
+```c
+for (i = 0; i < N; i++)
+  for (j = 0; j < M; j++)
+    A[i][j] = ...;
+```
+
+目标调度树：
+```
+[i,j] -> [ii, jj, i_in, j_in]
+其中：
+  ii = i / 32,  jj = j / 32
+  i_in = i % 32, j_in = j % 32
+```
+
+### ✅ 实现代码
+
+```c
+#include <isl/schedule.h>
+#include <isl/union_set.h>
+#include <isl/union_pw_multi_aff.h>
+
+__isl_give isl_schedule *create_tiling_schedule(isl_ctx *ctx, int tile_size) {
+    // Step 1: 原始域
+    isl_union_set *domain = isl_union_set_from_str(ctx,
+        "{ S[i,j] : 0 <= i < N and 0 <= j < M }"
+    );
+
+    // Step 2: 构造分块映射（contraction）
+    // i = 32*ii + i_in, j = 32*jj + j_in
+    isl_union_pw_multi_aff *contraction = isl_union_pw_multi_aff_from_str(ctx,
+        "{ S[ii, jj, i_in, j_in] -> S[32*ii + i_in, 32*jj + j_in] }"
+    );
+
+    // Step 3: 块域（tile domain）
+    isl_union_set *tile_domain = isl_union_set_from_str(ctx,
+        "{ S[ii, jj] : 0 <= ii < ceil(N/32) and 0 <= jj < ceil(M/32) }"
+    );
+
+    // Step 4: 块内调度（intra-tile）
+    isl_schedule_tree *inner_tree = isl_schedule_tree_from_str(ctx,
+        "[ii, jj] -> { S[i_in, j_in] -> [ii, jj, i_in, j_in] }"
+    );
+
+    // Step 5: 初始调度节点（根节点）
+    isl_schedule *schedule = isl_schedule_from_domain(domain);
+    isl_schedule_node *node = isl_schedule_get_root(schedule);
+
+    // Step 6: 应用 expand 实现分块
+    node = isl_schedule_node_expand(node,
+        isl_union_pw_multi_aff_copy(contraction),
+        isl_union_set_copy(tile_domain),
+        isl_schedule_tree_copy(inner_tree)
+    );
+
+    // Step 7: 简化（在参数 N>0, M>0 下）
+    isl_set *param_context = isl_set_from_str(ctx, "[N,M] -> { : N > 0 and M > 0 }");
+    node = isl_schedule_node_domain_gist_params(node, param_context);
+
+    // Step 8: 获取最终调度
+    isl_schedule_tree *new_tree = isl_schedule_node_get_tree(node);
+    isl_schedule *final_sched = isl_schedule_from_tree(new_tree);
+
+    // 清理
+    isl_schedule_node_free(node);
+    isl_union_pw_multi_aff_free(contraction);
+    isl_union_set_free(tile_domain);
+    isl_schedule_tree_free(inner_tree);
+    isl_union_set_free(domain);
+
+    return final_sched;
+}
+```
+
+### ✅ 输出调度
+
+```text
+S[i,j] -> [ floor(i/32), floor(j/32), i mod 32, j mod 32 ]
+```
+
+对应代码：
+
+```c
+for (ii = 0; ii < (N+31)/32; ii++)
+  for (jj = 0; jj < (M+31)/32; jj++)
+    for (i_in = 0; i_in < 32 && ii*32+i_in < N; i_in++)
+      for (j_in = 0; j_in < 32 && jj*32+j_in < M; j_in++)
+        A[ii*32+i_in][jj*32+j_in] = ...;
+```
+
+---
+
+## 📊 接口使用场景总结
+
+| 接口 | 典型用途 |
+|------|---------|
+| `isl_schedule_node_expand` | 分块、tiling |
+| `isl_schedule_node_pullback_union_pw_multi_aff` | 重索引、函数内联 |
+| `isl_schedule_node_gist` | 调度简化 |
+| `isl_schedule_node_domain_intersect_domain` | 条件优化（如边界处理） |
+| `isl_schedule_node_insert_expansion` | 向量化（SIMD lane） |
+| `isl_schedule_node_graft_tree` | 插入自定义调度结构（如 GPU block） |
+
+---
+
+## 🔄 工作流程图
+
+```mermaid
+graph TD
+    A[原始域] --> B[构建初始调度]
+    B --> C[获取根节点]
+    C --> D{要分块？}
+    D -->|是| E[isl_schedule_node_expand]
+    D -->|否| F[isl_schedule_node_pullback]
+    E --> G[isl_schedule_node_gist 简化]
+    G --> H[生成最终调度]
+    F --> H
+```
+
+---
+
+## ✅ 总结
+
+你提供的 `isl_schedule_node` 接口是 ISL 中**实现高级循环变换的“积木”**，它们允许你：
+
+- 🔧 **精确控制调度树结构**
+- 🧱 **组合分块、向量化、并行化**
+- 🎯 **实现领域专用优化（DSL）**
+
+这些接口是 **MLIR Affine Pass**（如 `affine-tile`, `affine-vectorize`）的底层支撑。
+
+---
+
+是否希望我：
+
+1. ✅ 将此分块调度集成到之前的 **MLIR Pass**？
+2. ✅ 实现 **向量化 + 分块** 的组合？
+3. ✅ 提供 **GPU 调度映射** 示例（block, thread）？
+
+请告诉我你的目标平台（CPU/GPU/HPC），我可以继续深入。
