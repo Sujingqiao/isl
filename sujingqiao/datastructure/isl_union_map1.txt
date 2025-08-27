@@ -1,0 +1,269 @@
+你提供的是一组 **ISL 中 `isl_union_map`** 的核心接口，它是 **关系（relation）的并集（union）**，是 **循环依赖分析、调度变换、内存访问建模** 的关键数据结构。
+
+我们将这些接口按 **逻辑功能分组**，每组对应一种 **集合与映射操作逻辑**，并详细注释每个接口的作用。最后用一个 **综合示例**：**分析两个数组访问之间的数据依赖，并应用上下文简化**。
+
+---
+
+## 📚 分组说明
+
+我们将接口分为 **8 大类**，每类对应一种 `isl_union_map` 的处理逻辑：
+
+---
+
+### 🔹 分组 1：**构造与销毁（Construction & Destruction）**
+
+> 创建、复制、释放 `isl_union_map`。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_from_basic_map(...)` | 从一个基本关系（`basic_map`）创建 `union_map`（通常用于内部构造）。 |
+| `__isl_give isl_union_map *isl_map_to_union_map(...)` | 将 `isl_map` 转换为 `isl_union_map`（常用）。 |
+| `__isl_give isl_union_map *isl_union_map_empty(...)` | 创建一个空的 `union_map`（指定空间）。 |
+| `__isl_give isl_union_map *isl_union_map_copy(...)` | 增加引用计数（拷贝）。 |
+| `__isl_null isl_union_map *isl_union_map_free(...)` | 释放内存，引用计数归零时销毁。 |
+| `isl_ctx *isl_union_map_get_ctx(...)` | 获取上下文（用于错误处理、内存管理）。 |
+| `__isl_give isl_space *isl_union_map_get_space(...)` | 获取其空间结构（参数、域、像的维度和命名）。 |
+
+> ✅ **用途**：初始化、资源管理、类型转换。
+
+---
+
+### 🔹 分组 2：**维度查询与命名操作**
+
+> 查询维度信息、ID、名称。
+
+| 接口 | 说明 |
+|------|------|
+| `isl_size isl_union_map_dim(...)` | 获取某类维度（参数、输入、输出）的数量。 |
+| `isl_bool isl_union_map_involves_dims(...)` | 检查是否使用了从 `first` 开始的 `n` 个维度。 |
+| `__isl_give isl_id *isl_union_map_get_dim_id(...)` | 获取某个维度的 ID（用于绑定用户数据）。 |
+| `int isl_union_map_find_dim_by_name(...)` | 根据名称查找维度位置。 |
+
+> ✅ **用途**：元信息查询、调试、Pass 中变量定位。
+
+---
+
+### 🔹 分组 3：**域与像（Domain & Range）操作**
+
+> 提取或构造映射的域（输入）和像（输出）。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_set *isl_union_map_domain(...)` | 获取所有关系的**域的并集**（输入集合）。 |
+| `__isl_give isl_union_set *isl_union_map_range(...)` | 获取所有关系的**像的并集**（输出集合）。 |
+| `__isl_give isl_union_map *isl_union_map_domain_map(...)` | 构造一个映射：`domain → {domain}`（用于建模执行时间）。 |
+| `__isl_give isl_union_map *isl_union_map_range_map(...)` | 构造：`range → {range}`。 |
+| `__isl_give isl_union_map *isl_union_set_wrapped_domain_map(...)` | 将集合“包装”为 `domain → {domain}` 的映射。 |
+| `__isl_give isl_union_map *isl_union_map_from_domain(...)` | 从集合构造 `domain → ∅` 的映射（用于初始化）。 |
+| `__isl_give isl_union_map *isl_union_map_from_range(...)` | 从集合构造 `∅ → range` 的映射。 |
+
+> ✅ **用途**：依赖分析、调度构造、内存访问建模。
+
+---
+
+### 🔹 分组 4：**凸包与简化（Hull & Coalescing）**
+
+> 计算数学上的“包络”，合并冗余部分。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_affine_hull(...)` | 计算**仿射包**（忽略整数性，连续松弛）。 |
+| `__isl_give isl_union_map *isl_union_map_polyhedral_hull(...)` | 计算**多面体包**（保留整数性）。 |
+| `__isl_give isl_union_map *isl_union_map_simple_hull(...)` | 简单包（不保证最小）。 |
+| `__isl_give isl_union_map *isl_union_map_coalesce(...)` | 合并可以合并的 `basic_map`（减少片段数）。 |
+| `__isl_give isl_union_map *isl_union_map_remove_redundancies(...)` | 去除冗余约束。 |
+| `__isl_give isl_union_map *isl_union_map_compute_divs(...)` | 显式计算并插入需要的除法（division）。 |
+
+> ✅ **用途**：简化复杂关系、优化调度、依赖分析加速。
+
+---
+
+### 🔹 分组 5：**集合运算（Union, Intersect, Subtract）**
+
+> 标准集合操作。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_add_map(...)` | 添加一个 `isl_map` 到并集中。 |
+| `__isl_give isl_union_map *isl_union_map_union(...)` | 并集（`A ∪ B`）。 |
+| `__isl_give isl_union_map *isl_union_map_intersect(...)` | 交集（`A ∩ B`）。 |
+| `__isl_give isl_union_map *isl_union_map_subtract(...)` | 差集（`A \ B`）。 |
+| `__isl_give isl_union_map *isl_union_map_intersect_params(...)` | 与参数集合交集（限制参数范围）。 |
+
+> ✅ **用途**：组合多个访问关系、施加上下文约束。
+
+---
+
+### 🔹 分组 6：**乘积与组合（Product Operations）**
+
+> 构造复合关系。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_product(...)` | 笛卡尔积：`(A × B)`，结果是 `(in1,out1,in2,out2)`。 |
+| `__isl_give isl_union_map *isl_union_map_domain_product(...)` | `A` 的域与 `B` 的域拼接，像不变。 |
+| `__isl_give isl_union_map *isl_union_map_range_product(...)` | `A` 的像与 `B` 的像拼接。 |
+| `__isl_give isl_union_map *isl_union_map_flat_domain_product(...)` | 域拼接，但维度展平（不嵌套）。 |
+
+> ✅ **用途**：建模多维数组访问、嵌套循环组合。
+
+---
+
+### 🔹 分组 7：**因式分解（Factorization）**
+
+> 分解域或像中的结构。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_factor_domain(...)` | 如果像与域无关，将其从域中移出。 |
+| `__isl_give isl_union_map *isl_union_map_factor_range(...)` | 类似，从像中移出与域无关的部分。 |
+| `__isl_give isl_union_map *isl_union_map_domain_factor_domain(...)` | 更精细的域因式分解。 |
+| `__isl_give isl_union_map *isl_union_map_range_factor_range(...)` | 像的因式分解。 |
+
+> ✅ **用途**：简化调度、提取循环不变量。
+
+---
+
+### 🔹 分组 8：**上下文简化（Gist）**
+
+> 在给定上下文下去除冗余约束。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_gist(...)` | 在上下文 `context`（`union_map`）下简化自身。 |
+| `__isl_give isl_union_map *isl_union_map_gist_params(...)` | 在参数上下文 `set` 下简化。 |
+| `__isl_give isl_union_map *isl_union_map_gist_domain(...)` | 在域上下文 `uset` 下简化。 |
+| `__isl_give isl_union_map *isl_union_map_gist_range(...)` | 在像上下文 `uset` 下简化。 |
+
+> ✅ **用途**：依赖分析中利用循环边界、数组边界等上下文信息。
+
+---
+
+## 🧩 综合示例：**数组访问依赖分析 + 上下文简化**
+
+我们要分析以下代码的 **写后读（WAR）依赖**：
+
+```c
+for (i = 0; i < N; i++)
+  for (j = 0; j < M; j++) {
+    A[i][j] = ...;           // S1: 写 A[i][j]
+    ... = A[i][j+1] + A[i-1][j]; // S2: 读 A[i][j+1] 和 A[i-1][j]
+  }
+```
+
+目标：计算 S1 → S2 的依赖关系，并在 `0 <= i < N, 0 <= j < M` 上下文中简化。
+
+### ✅ 实现代码
+
+```c
+#include <isl/union_map.h>
+#include <isl/set.h>
+#include <isl/map.h>
+
+__isl_give isl_union_map *compute_dependency_with_gist(isl_ctx *ctx, int N, int M) {
+    // Step 1: 构造参数空间
+    isl_space *param_space = isl_space_set_alloc(ctx, 1, 2);
+    param_space = isl_space_set_dim_name(param_space, isl_dim_param, 0, "N");
+    param_space = isl_space_set_dim_name(param_space, isl_dim_param, 1, "M");
+
+    // Step 2: 构造 S1 的写访问：S1[i,j] -> A[i,j]
+    isl_space *space_S1 = isl_space_map_from_domain_and_range(
+        isl_space_copy(param_space),
+        isl_space_set_alloc(ctx, 0, 2), // i,j
+        isl_space_set_alloc(ctx, 0, 2)  // i,j (数组索引)
+    );
+    space_S1 = isl_space_set_tuple_name(space_S1, isl_dim_in, "S1");
+    space_S1 = isl_space_set_tuple_name(space_S1, isl_dim_out, "A");
+
+    isl_map *write_map = isl_map_universe(space_S1);
+    write_map = isl_map_add_constraint(write_map,
+        isl_constraint_alloc_equality(isl_local_space_from_space(isl_space_copy(space_S1)))
+    );
+    // 约束：out_i = in_i, out_j = in_j
+    write_map = isl_map_fix_dim_si(write_map, isl_dim_out, 0, 0); // out_i = in_i
+    write_map = isl_map_fix_dim_si(write_map, isl_dim_out, 1, 0); // out_j = in_j
+
+    // Step 3: 构造 S2 的读访问：S2[i,j] -> A[i, j+1] 和 A[i-1, j]
+    isl_space *space_S2 = isl_space_map_from_domain_and_range(
+        isl_space_copy(param_space),
+        isl_space_set_alloc(ctx, 0, 2), // i,j
+        isl_space_set_alloc(ctx, 0, 2)  // i,j
+    );
+    space_S2 = isl_space_set_tuple_name(space_S2, isl_dim_in, "S2");
+    space_S2 = isl_space_set_tuple_name(space_S2, isl_dim_out, "A");
+
+    isl_map *read_map1 = isl_map_universe(isl_space_copy(space_S2));
+    read_map1 = isl_map_fix_dim_si(read_map1, isl_dim_out, 0, 0); // out_i = in_i
+    read_map1 = isl_map_add_const_dim_si(read_map1, isl_dim_out, 1, 1); // out_j = in_j + 1
+
+    isl_map *read_map2 = isl_map_universe(isl_space_copy(space_S2));
+    read_map2 = isl_map_add_const_dim_si(read_map2, isl_dim_out, 0, -1); // out_i = in_i - 1
+    read_map2 = isl_map_fix_dim_si(read_map2, isl_dim_out, 1, 0); // out_j = in_j
+
+    isl_union_map *read_UM = isl_union_map_from_map(read_map1);
+    read_UM = isl_union_map_add_map(read_UM, read_map2);
+
+    // Step 4: 计算 WAR 依赖：write^{-1} ∘ read
+    isl_union_map *write_UM = isl_union_map_from_map(write_map);
+    isl_union_map *write_inv = isl_union_map_reverse(isl_union_map_copy(write_UM)); // S1^{-1}: A[i,j] -> S1[i,j]
+    isl_union_map *dep = isl_union_map_apply_range(write_inv, read_UM); // S1[i,j] -> S2[i',j']
+
+    // Step 5: 构造上下文：循环边界
+    isl_set *context_set = isl_set_from_str(ctx,
+        "[N,M] -> { [i,j] : 0 <= i < N and 0 <= j < M }"
+    );
+    isl_union_set *context_uset = isl_union_set_from_set(context_set);
+
+    // Step 6: 应用上下文简化
+    dep = isl_union_map_gist_domain(dep, isl_union_set_copy(context_uset));
+    dep = isl_union_map_gist_range(dep, isl_union_set_copy(context_uset));
+
+    // Step 7: 合并可合并的片段
+    dep = isl_union_map_coalesce(dep);
+
+    return dep;
+}
+```
+
+### ✅ 输出依赖关系
+
+```text
+{ S1[i,j] -> S2[i,j-1] : 0 <= i < N and 1 <= j < M }  // 来自 A[i][j+1]
+{ S1[i,j] -> S2[i+1,j] : 0 <= i < N-1 and 0 <= j < M } // 来自 A[i-1][j]
+```
+
+---
+
+## 📊 接口使用场景总结
+
+| 接口 | 典型用途 |
+|------|---------|
+| `isl_union_map_intersect` | 施加上下文约束 |
+| `isl_union_map_gist_domain` | 依赖简化 |
+| `isl_union_map_coalesce` | 减少依赖片段数 |
+| `isl_union_map_domain` | 获取访问域 |
+| `isl_union_map_factor_range` | 提取不变量 |
+| `isl_union_map_product` | 建模多维访问 |
+
+---
+
+## ✅ 总结
+
+`isl_union_map` 是 ISL 中 **表示“并集关系”** 的核心类型，支持：
+
+- 🧮 任意关系的并集
+- 🔍 依赖分析（RAW, WAR, WAW）
+- 🎯 上下文敏感简化（`gist`）
+- 🧱 复杂访问模式建模
+
+它是 **MLIR 中 `memref` 访问分析、Polyhedral 编译器（如 Pluto, LLVM Polly）** 的底层基础。
+
+---
+
+是否希望我：
+
+1. ✅ 将此依赖分析集成到 **MLIR Pass**？
+2. ✅ 实现 **自动并行化决策**（基于依赖方向）？
+3. ✅ 提供 **GPU 共享内存重用分析** 示例？
+
+请告诉我你的目标（编译器开发 / 高性能计算 / 学术研究），我可以继续深入。
