@@ -1,0 +1,317 @@
+非常好！你提供的是 ISL（Integer Set Library）中一组非常底层、强大且关键的接口，涉及**多面体几何性质分析、变量变换、有理数支持、除法处理、上下文简化、参数对齐**等高级操作。
+
+我们将这些接口**按功能逻辑分组**，每组说明其**处理逻辑、用途、详细注释**，并最后给出一个**综合示例**，展示如何组合使用这些功能进行高级多面体变换与分析。
+
+---
+
+## ✅ 分组一：**多面体的几何性质提取（Recession Cone & Lineality Space）**
+
+> 用于分析集合的“无限方向”和“对称方向”。
+
+```c
+__isl_give isl_basic_set *isl_basic_set_recession_cone(
+	__isl_take isl_basic_set *bset);
+// 返回 bset 的 recession cone（后退锥）：所有使得从集合中任一点出发沿该方向无限延伸仍留在集合中的方向。
+// 例如：{ [i] : i >= 0 } 的 recession cone 是 { [d] : d >= 0 }
+// 用途：循环边界分析、无界性检测
+
+__isl_give isl_basic_set *isl_basic_set_lineality_space(
+	__isl_take isl_basic_set *bset);
+// 返回 bset 的 lineality space（线性空间）：既是 recession cone 又是其负方向也在集合中的方向集合。
+// 即：d 和 -d 都是 recession direction → d 在 lineality space 中
+// 例如：{ [i] : i free } 的 lineality space 是 { [d] : d free }
+// 用途：识别对称自由度、简化依赖分析
+
+__isl_give isl_set *isl_set_combined_lineality_space(
+	__isl_take isl_set *set);
+// 对 isl_set（多个基本集的并）计算所有基本集 lineality space 的交集
+// 用于多分支控制流下的统一自由方向分析
+```
+
+> 📌 **处理逻辑**：分析集合的“无限可扩展方向”，用于判断程序循环是否无界、是否存在对称性、是否可并行化。
+
+---
+
+## ✅ 分组二：**有理数（Rational） vs 整数（Integral）语义控制**
+
+> ISL 默认处理整数格点，但某些场景（如调度、松弛优化）需要支持有理数。
+
+```c
+__isl_give isl_basic_set *isl_basic_set_set_integral(
+	__isl_take isl_basic_set *bset);
+// 强制 bset 为整数语义（默认），即所有点必须是整数格点
+
+__isl_give isl_basic_set *isl_basic_set_set_rational(
+	__isl_take isl_basic_set *bset);
+__isl_give isl_set *isl_set_set_rational(__isl_take isl_set *set);
+__isl_give isl_basic_map *isl_basic_map_set_rational(
+	__isl_take isl_basic_map *bmap);
+__isl_give isl_map *isl_map_set_rational(__isl_take isl_map *map);
+// 将集合/映射标记为“有理数语义”——允许点坐标为有理数
+// 用途：调度器中允许非整数时间戳、松弛优化
+
+isl_bool isl_map_is_rational(__isl_keep isl_map *map);
+isl_bool isl_set_is_rational(__isl_keep isl_set *set);
+// 查询是否为有理数语义
+
+isl_bool isl_map_has_rational(__isl_keep isl_map *map);
+isl_bool isl_set_has_rational(__isl_keep isl_set *set);
+// 查询是否“包含”有理数语义的基本块（用于 union_map/set）
+```
+
+> 📌 **处理逻辑**：控制 ISL 对“点”的解释是整数格点还是实数/有理数点，影响后续的交、并、投影等操作语义。
+
+---
+
+## ✅ 分组三：**仿射函数转映射（Affine to Map）**
+
+> 将仿射表达式（如 `i+1`）转换为映射关系（如 `[i] -> [i+1]`）。
+
+```c
+__isl_give isl_basic_map *isl_basic_map_from_multi_aff2(
+	__isl_take isl_multi_aff *maff, int rational);
+// 将 multi_aff 转为 basic_map，rational 表示是否启用有理数语义
+// 例如：maff = [i+1] → basic_map = { [i] -> [i+1] }
+
+__isl_give isl_map *isl_map_from_multi_aff_internal(
+	__isl_take isl_multi_aff *ma);
+// 多输出仿射函数转为 map（内部函数，慎用）
+
+__isl_give isl_map *isl_map_from_pw_aff_internal(__isl_take isl_pw_aff *pa);
+// 分段仿射函数转为 map（如 { [i] -> [2*i] if i<5 }）
+
+__isl_give isl_map *isl_map_from_pw_multi_aff_internal(
+	__isl_take isl_pw_multi_aff *pma);
+// 分段多输出仿射函数转为 map
+```
+
+> 📌 **处理逻辑**：将程序中的“表达式”提升为“关系”，用于构建依赖图、调度关系、数据流。
+
+---
+
+## ✅ 分组四：**线性变换（Preimage & Transform Dims）**
+
+> 使用矩阵对变量空间进行线性变换。
+
+```c
+__isl_give isl_basic_set *isl_basic_set_preimage(
+	__isl_take isl_basic_set *bset, __isl_take isl_mat *mat);
+__isl_give isl_set *isl_set_preimage(
+	__isl_take isl_set *set, __isl_take isl_mat *mat);
+// 对 bset/set 应用 mat 的逆变换（preimage）：x ∈ bset iff mat⁻¹·x ∈ 原集合
+// 用于坐标变换、循环重映射
+
+__isl_give isl_basic_map *isl_basic_map_transform_dims(
+	__isl_take isl_basic_map *bmap, enum isl_dim_type type, unsigned first,
+	__isl_take isl_mat *trans);
+__isl_give isl_basic_set *isl_basic_set_transform_dims(
+	__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned first,
+	__isl_take isl_mat *trans);
+// 对 bset/bmap 的指定维度（type 类型，从 first 开始）应用线性变换 trans
+// 例如：将 [i,j] 变为 [i+j, i-j]
+```
+
+> 📌 **处理逻辑**：实现循环空间的仿射变换（如 skewing、tiling、fusion 所需的坐标变换）。
+
+---
+
+## ✅ 分组五：**除法（Div）处理与展开**
+
+> ISL 支持模运算和整除（如 `e0 = floor((i+j)/2)`），这些“局部变量”称为 `div`。
+
+```c
+__isl_give isl_basic_set *isl_basic_set_expand_divs(
+	__isl_take isl_basic_set *bset, __isl_take isl_mat *div, int *exp);
+// 将 bset 中的 div 变量用显式表达式展开（exp 数组控制是否展开）
+// 用于消除隐式变量，便于分析
+
+__isl_give isl_basic_map *isl_basic_map_expand_divs(
+	__isl_take isl_basic_set *bmap, __isl_take isl_mat *div, int *exp);
+// 同上，用于映射
+
+__isl_give isl_mat *isl_basic_set_get_divs(__isl_keep isl_basic_set *bset);
+__isl_give isl_mat *isl_basic_map_get_divs(__isl_keep isl_basic_map *bmap);
+// 获取 bset/bmap 中所有 div 的定义矩阵（每一行是一个 div 的 affine 表达式）
+
+isl_bool isl_basic_map_divs_known(__isl_keep isl_basic_map *bmap);
+isl_bool isl_map_divs_known(__isl_keep isl_map *map);
+// 检查所有 div 是否都已知（未标记为 unknown）
+
+isl_bool isl_basic_map_div_is_known(__isl_keep isl_basic_map *bmap, int div);
+isl_bool isl_basic_map_div_is_marked_unknown(__isl_keep isl_basic_map *bmap, int div);
+// 查询特定 div 是否已知或标记为 unknown
+
+__isl_give isl_basic_map *isl_basic_map_mark_div_unknown(
+	__isl_take isl_basic_map *bmap, int div);
+// 将第 div 个 div 标记为 unknown（用于延迟求解）
+```
+
+> 📌 **处理逻辑**：处理程序中的 `floor`、`mod` 等非线性操作引入的隐式变量，决定是否展开或保留。
+
+---
+
+## ✅ 分组六：**点与集合的成员关系 & 遍历**
+
+```c
+isl_bool isl_basic_map_contains_point(__isl_keep isl_basic_map *bmap,
+	__isl_keep isl_point *point);
+isl_bool isl_set_contains_point(__isl_keep isl_set *set,
+	__isl_keep isl_point *point);
+// 检查某点是否在集合/映射中
+
+isl_stat isl_set_foreach_orthant(__isl_keep isl_set *set,
+	isl_stat (*fn)(__isl_take isl_set *orthant, int *signs, void *user),
+	void *user);
+// 遍历 set 的每个“象限”（orthant），即每个变量正负组合的子空间
+// signs 数组表示各变量符号（+1, -1, 0）
+
+isl_stat isl_basic_set_vars_get_sign(__isl_keep isl_basic_set *bset,
+	unsigned first, unsigned n, int *signs);
+// 获取 bset 中从 first 开始的 n 个变量的符号约束（+1: ≥0, -1: ≤0, 0: 自由）
+```
+
+> 📌 **处理逻辑**：用于调试、验证、符号分析、象限分解。
+
+---
+
+## ✅ 分组七：**等式/不等式数量查询**
+
+```c
+isl_size isl_basic_set_n_equality(__isl_keep isl_basic_set *bset);
+isl_size isl_basic_map_n_equality(__isl_keep isl_basic_map *bmap);
+isl_size isl_basic_set_n_inequality(__isl_keep isl_basic_set *bset);
+isl_size isl_basic_map_n_inequality(__isl_keep isl_basic_map *bmap);
+// 返回基本集/映射中等式和不等式的数量
+// 用于复杂度估计、简化判断
+```
+
+> 📌 **处理逻辑**：获取多面体的约束数量，用于性能分析或简化策略。
+
+---
+
+## ✅ 分组八：**参数对齐（Parameter Alignment）**
+
+> 多个集合/映射必须有相同参数顺序才能进行交、并等操作。
+
+```c
+isl_stat isl_map_align_params_bin(__isl_keep isl_map **map1,
+	__isl_keep isl_map **map2);
+// 对齐 map1 和 map2 的参数顺序（修改指针指向新对齐对象）
+// 若失败返回 -1
+
+isl_stat isl_map_align_params_set(__isl_keep isl_map **map,
+	__isl_keep isl_set **set);
+// 对齐 map 和 set 的参数
+
+isl_bool isl_map_align_params_map_map_and_test(__isl_keep isl_map *map1,
+	__isl_keep isl_map *map2,
+	isl_bool (*fn)(__isl_keep isl_map *map1, __isl_keep isl_map *map2));
+// 对齐后立即执行 fn 函数（避免重复对齐）
+```
+
+> 📌 **处理逻辑**：确保多个对象在相同参数空间下操作，是组合分析的前提。
+
+---
+
+## ✅ 分组九：**上下文简化（Gist）与替换（Substitute）**
+
+```c
+__isl_give isl_set *isl_set_gist_params_basic_set(__isl_take isl_set *set,
+	__isl_take isl_basic_set *context);
+// 在 context 参数约束下简化 set 的表达
+// 例如：set = { [i] : i > N }, context = { N >= 10 } → 可能简化为 { [i] : i > 10 }
+
+__isl_give isl_set *isl_set_substitute(__isl_take isl_set *set,
+	enum isl_dim_type type, unsigned pos, __isl_keep isl_aff *subs);
+// 将 set 中 type 类型的第 pos 个变量替换为仿射表达式 subs
+// 例如：将 i 替换为 j+k
+```
+
+> 📌 **处理逻辑**：利用已知上下文简化集合表达式，或进行变量消去。
+
+---
+
+## ✅ 综合示例：分析一个带 floor 的循环依赖，并进行坐标变换
+
+```c
+#include <isl/set.h>
+#include <isl/map.h>
+#include <isl/mat.h>
+#include <isl/constraint.h>
+
+int main() {
+    isl_ctx *ctx = isl_ctx_alloc();
+
+    // 1. 定义循环域：{ [i] : 0 <= i < 2*N }
+    isl_set *domain = isl_set_from_str(ctx, "{ [i] : 0 <= i < 2*N }");
+
+    // 2. 定义依赖：j = floor(i/2)，即 { [i] -> [j] : j = floor(i/2) }
+    isl_map *dep = isl_map_from_str(ctx, "{ [i] -> [floor(i/2)] }");
+
+    // 3. 对齐参数（确保 domain 和 dep 参数一致）
+    isl_set_align_params(&domain, &dep);
+
+    // 4. 检查 dep 是否有未知 div
+    if (!isl_map_divs_known(dep)) {
+        printf("Dependency has unknown divs.\n");
+    }
+
+    // 5. 获取并展开 div（显式化 floor）
+    isl_basic_map *bdep = isl_basic_map_from_map(isl_map_copy(dep));
+    isl_mat *divs = isl_basic_map_get_divs(bdep);
+    int *exp = (int*)calloc(isl_mat_rows(divs), sizeof(int));
+    exp[0] = 1; // 展开第一个 div
+    isl_basic_map *expanded = isl_basic_map_expand_divs(bdep, divs, exp);
+    isl_map *dep_expanded = isl_map_from_basic_map(expanded);
+    free(exp);
+
+    // 6. 坐标变换：令 k = i - j，使用 preimage
+    // 构造变换矩阵：[i, j] -> [k=i-j, j]
+    isl_mat *trans = isl_mat_alloc(ctx, 2, 2);
+    isl_int_set_si(isl_mat_entry(trans, 0, 0), 1);  // k = 1*i + (-1)*j
+    isl_int_set_si(isl_mat_entry(trans, 0, 1), -1);
+    isl_int_set_si(isl_mat_entry(trans, 1, 0), 0);
+    isl_int_set_si(isl_mat_entry(trans, 1, 1), 1);  // j = 0*i + 1*j
+    isl_basic_map *transformed = isl_basic_map_transform_dims(
+        isl_basic_map_from_map(dep_expanded),
+        isl_dim_out, 0, trans);
+    isl_map *result = isl_map_from_basic_map(transformed);
+
+    // 7. 利用上下文 N >= 10 简化
+    isl_basic_set *context = isl_basic_set_from_str(ctx, "[N] -> { : N >= 10 }");
+    isl_set *simple_domain = isl_set_gist_params_basic_set(domain, context);
+
+    // 8. 打印结果
+    printf("Original domain: ");
+    isl_set_dump(simple_domain);
+    printf("Transformed dependency: ");
+    isl_map_dump(result);
+
+    // 9. 清理
+    isl_set_free(simple_domain);
+    isl_map_free(result);
+    isl_basic_set_free(context);
+    isl_ctx_free(ctx);
+
+    return 0;
+}
+```
+
+---
+
+## ✅ 总结
+
+| 分组 | 核心功能 | 典型用途 |
+|------|---------|----------|
+| 几何性质 | recession/lineality | 无界性、对称性分析 |
+| 有理数控制 | set_rational | 调度、松弛优化 |
+| Affine → Map | from_multi_aff | 构建依赖/调度关系 |
+| 线性变换 | preimage/transform_dims | 循环变换（tiling, skewing） |
+| Div 处理 | expand_divs/get_divs | 处理 floor/mod |
+| 成员查询 | contains_point | 调试、验证 |
+| 参数对齐 | align_params | 多对象组合操作前提 |
+| 上下文简化 | gist/substitute | 表达式化简、变量替换 |
+
+这些接口是 ISL 实现**高级循环优化**（如 Pluto、Tiramisu）的核心工具。掌握它们，你就能深入多面体编译器的底层逻辑。
+
+是否需要我提供一个 **“如何用这些接口实现循环融合（loop fusion）的依赖检查”** 的实战案例？
