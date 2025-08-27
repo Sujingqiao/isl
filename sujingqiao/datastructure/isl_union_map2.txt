@@ -1,0 +1,308 @@
+你补充的这部分接口进一步扩展了 `isl_union_map` 的功能，涵盖了 **集合运算、映射应用、预像（preimage）、反转、断言检查、遍历、幂运算、词法比较、I/O、包装/解包、参数对齐** 等高级操作。
+
+我们继续以 **逻辑功能分组** 的方式，将这些接口整合进之前的框架中，并补充新组。每组说明 **处理逻辑 + 详细注释 + 综合示例**。
+
+---
+
+## 🔧 新增接口分组（补充并完善原有分类）
+
+---
+
+### 🔹 分组 9：**集合差（Subtract Domain/Range）**
+
+> 从映射的域或像中移除某些点。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_subtract_domain(...)` | 移除域中属于 `dom` 的点：`{(d,r) ∈ umap | d ∉ dom}`。 |
+| `__isl_give isl_union_map *isl_union_map_subtract_range(...)` | 移除像中属于 `dom` 的点：`{(d,r) ∈ umap | r ∉ dom}`。 |
+
+> ✅ **用途**：排除某些执行实例或访问位置，例如边界条件处理。
+
+---
+
+### 🔹 分组 10：**映射应用（Apply）**
+
+> 将一个关系“作用”于另一个关系上（复合）。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_apply_domain(...)` | `umap1 ∘ umap2`：先应用 `umap2`，再 `umap1`（标准关系复合）。 |
+| `__isl_give isl_union_map *isl_union_map_apply_range(...)` | `umap2 ∘ umap1`：顺序相反。 |
+
+> ✅ **用途**：调度变换应用、依赖链推导（如 `dep1 ∘ dep2` 表示跨两步的依赖）。
+
+---
+
+### 🔹 分组 11：**预像（Preimage）**
+
+> 将域或像通过仿射函数“拉回”。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_preimage_domain_multi_aff(...)` | 将域替换为 `ma(x)`，即 `umap(ma(x), y)`。 |
+| `__isl_give isl_union_map *isl_union_map_preimage_range_multi_aff(...)` | 将像替换为 `ma(y)`，即 `umap(x, ma(y))`。 |
+| 支持 `pw_multi_aff`, `multi_pw_aff`, `union_pw_multi_aff` 等分段/并集形式 | 处理条件调度、if 分支等复杂变换。 |
+
+> ✅ **用途**：将调度函数作用于访问关系，实现“调度后访问分析”。
+
+---
+
+### 🔹 分组 12：**反转与对称操作**
+
+> 反转映射方向或结构。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_reverse(...)` | 反转关系：`(d,r) → (r,d)`。用于读写依赖互换。 |
+| `__isl_give isl_union_map *isl_union_map_range_reverse(...)` | 仅反转像中的元组顺序（如 `(i,j) → (j,i)`）。 |
+| `__isl_give isl_union_map *isl_union_set_identity(...)` | 构造恒等映射：`{x → x}`。 |
+| `__isl_give isl_union_map *isl_union_map_from_domain_and_range(...)` | 构造 `domain → range` 的全连接映射。 |
+
+> ✅ **用途**：依赖方向分析、构造调度约束。
+
+---
+
+### 🔹 分组 13：**结构分析与检测**
+
+> 检测关系的数学性质。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_detect_equalities(...)` | 将不等式约束中隐含的等式显式化。 |
+| `__isl_give isl_union_set *isl_union_map_deltas(...)` | 提取所有 `(out - in)` 的差值集合（依赖距离）。 |
+| `__isl_give isl_union_map *isl_union_map_deltas_map(...)` | 返回 `(in, out-in)` 的映射。 |
+| `isl_bool isl_union_map_is_single_valued(...)` | 是否每个输入至多一个输出（函数性）。 |
+| `isl_bool isl_union_map_is_injective(...)` | 是否单射（不同输入 → 不同输出）。 |
+| `isl_bool isl_union_map_is_bijective(...)` | 是否双射。 |
+| `isl_bool isl_union_map_is_identity(...)` | 是否恒等映射。 |
+| `isl_bool isl_union_map_is_empty(...)` | 是否为空。 |
+| `isl_bool isl_union_map_is_subset(...)` | 子集判断。 |
+| `isl_bool isl_union_map_is_equal(...)` | 相等判断。 |
+| `uint32_t isl_union_map_get_hash(...)` | 获取哈希值（用于缓存）。 |
+
+> ✅ **用途**：优化决策（如是否可向量化）、依赖分析验证。
+
+---
+
+### 🔹 分组 14：**投影与维度操作**
+
+> 移除或简化维度。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_project_out(...)` | 投影移除某类维度的 `n` 个变量。 |
+| `__isl_give isl_union_map *isl_union_map_project_out_all_params(...)` | 移除所有参数（仅保留变量）。 |
+| `__isl_give isl_union_map *isl_union_map_remove_divs(...)` | 移除所有局部除法（division）。 |
+
+> ✅ **用途**：降维分析、简化表达式。
+
+---
+
+### 🔹 分组 15：**绑定与元组操作**
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_set *isl_union_map_bind_range(...)` | 将像绑定为元组名（用于构造 `tagged` 数据结构）。 |
+
+> ✅ **用途**：MLIR 中 `affine.if`、`affine.for` 的标签绑定。
+
+---
+
+### 🔹 分组 16：**遍历与提取（Iteration & Extraction）**
+
+> 遍历内部 `isl_map` 片段。
+
+| 接口 | 说明 |
+|------|------|
+| `isl_size isl_union_map_n_map(...)` | 包含多少个 `isl_map`。 |
+| `isl_stat isl_union_map_foreach_map(...)` | 对每个 `map` 调用函数。 |
+| `__isl_give isl_map_list *isl_union_map_get_map_list(...)` | 获取 `map` 列表。 |
+| `__isl_give isl_union_map *isl_union_map_remove_map_if(...)` | 条件删除某些 `map`。 |
+| `__isl_give isl_map *isl_union_map_extract_map(...)` | 从 `union_map` 中提取匹配空间的 `map`。 |
+| `__isl_give isl_map *isl_union_map_as_map(...)` | 如果 `union_map` 实际只有一个 `map`，则转为 `isl_map`。 |
+
+> ✅ **用途**：调试、选择性处理、Pass 中细粒度控制。
+
+---
+
+### 🔹 分组 17：**幂与闭包（Power & Closure）**
+
+> 计算关系的迭代。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_power(...)` | 计算 `umap^n`（n 次复合）。 |
+| `__isl_give isl_union_map *isl_union_map_transitive_closure(...)` | 计算传递闭包（`umap⁺`），用于递归依赖。 |
+| `__isl_give isl_union_map *isl_union_map_fixed_power_val(...)` | 固定幂次（如 2 次、3 次）。 |
+
+> ✅ **用途**：递归函数分析、循环多次迭代建模。
+
+---
+
+### 🔹 分组 18：**词法顺序比较（Lexicographic Order）**
+
+| 接口 | 说明 |
+|------|------|
+| `isl_union_map_lex_lt_union_map` 等 | 比较两个 `union_map` 的域是否满足词法小于、小于等于等。返回满足 `d1 < d2` 的 `(d1,d2)` 对。 |
+
+> ✅ **用途**：循环顺序分析、数据重用判断。
+
+---
+
+### 🔹 分组 19：**与分段仿射函数比较**
+
+| 接口 | 说明 |
+|------|------|
+| `isl_union_map_lex_le_at_multi_union_pw_aff` 等 | 判断 `umap` 的输出是否 ≤ 某个分段仿射函数的值。返回满足条件的输入。 |
+
+> ✅ **用途**：条件调度下的依赖分析。
+
+---
+
+### 🔹 分组 20：**I/O 与打印**
+
+| 接口 | 说明 |
+|------|------|
+| `isl_union_map_read_from_str`, `isl_union_map_to_str` | 字符串读写。 |
+| `isl_printer_print_union_map` | 格式化输出。 |
+| `isl_union_map_dump` | 调试打印。 |
+
+> ✅ **用途**：调试、序列化。
+
+---
+
+### 🔹 分组 21：**包装与解包（Wrap/Unwrap）**
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_set *isl_union_map_wrap(...)` | 将 `union_map` 包装成集合：`{(in, out)}`。 |
+| `__isl_give isl_union_map *isl_union_set_unwrap(...)` | 解包回映射。 |
+
+> ✅ **用途**：将映射视为点集处理（如求凸包）。
+
+---
+
+### 🔹 分组 22：**元组操作（Curry/Zip）**
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_curry(...)` | 将多输入元组拆分为嵌套结构。 |
+| `__isl_give isl_union_map *isl_union_map_uncurry(...)` | 合并嵌套元组。 |
+| `__isl_give isl_union_map *isl_union_map_zip(...)` | 将两个映射的域/像拼接。 |
+
+> ✅ **用途**：处理嵌套循环、高维数组。
+
+---
+
+### 🔹 分组 23：**参数对齐（Align Params）**
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_union_map *isl_union_map_align_params(...)` | 将 `umap` 的参数与 `model` 空间对齐（重排序、插入）。 |
+| `isl_bool isl_union_map_space_has_equal_params(...)` | 检查参数是否一致。 |
+
+> ✅ **用途**：多个关系组合前的预处理（如不同函数间的依赖）。
+
+---
+
+## 🧩 综合示例：**调度变换下的依赖分析 + 传递闭包**
+
+目标：分析一个递归风格的循环依赖，并应用调度变换。
+
+```c
+for (i = 1; i < N; i++) {
+    A[i] = A[i-1] + B[i]; // S[i] 依赖 S[i-1]
+}
+```
+
+我们要计算 **所有传递依赖**，并应用调度 `t(i) = 2*i`。
+
+### ✅ 代码实现
+
+```c
+__isl_give isl_union_map *analyze_recursive_dep(isl_ctx *ctx, int N) {
+    // Step 1: 参数空间
+    isl_space *param = isl_space_set_alloc(ctx, 1, 1);
+    param = isl_space_set_dim_name(param, isl_dim_param, 0, "N");
+
+    // Step 2: 构造原始依赖：{ S[i] -> S[i-1] : 1 <= i < N }
+    isl_space *space = isl_space_map_from_domain_and_range(
+        isl_space_copy(param), 
+        isl_space_set_alloc(ctx, 0, 1),
+        isl_space_set_alloc(ctx, 0, 1)
+    );
+    space = isl_space_set_tuple_name(space, isl_dim_in, "S");
+    space = isl_space_set_tuple_name(space, isl_dim_out, "S");
+
+    isl_map *dep = isl_map_from_str(ctx,
+        "[N] -> { [i] -> [i-1] : 1 <= i < N }"
+    );
+
+    isl_union_map *udep = isl_union_map_from_map(dep);
+
+    // Step 3: 计算传递闭包（所有依赖链）
+    isl_bool exact;
+    isl_union_map *closure = isl_union_map_transitive_closure(udep, &exact);
+    if (!exact) {
+        printf("Warning: transitive closure not exact.\n");
+    }
+
+    // Step 4: 构造调度函数 t(i) = 2*i
+    isl_local_space *ls = isl_local_space_from_space(isl_space_copy(space));
+    isl_aff *aff = isl_aff_alloc(ls);
+    aff = isl_aff_set_coeff_si(aff, isl_dim_in, 0, 2); // 2*i
+    isl_multi_aff *ma = isl_multi_aff_from_aff(aff);
+
+    // Step 5: 应用调度到依赖的域和像
+    isl_union_map *sched_dom = isl_union_map_preimage_domain_multi_aff(
+        isl_union_map_copy(closure), isl_multi_aff_copy(ma));
+    isl_union_map *sched_range = isl_union_map_preimage_range_multi_aff(
+        closure, ma);
+    isl_union_map *final = isl_union_map_intersect(sched_dom, sched_range);
+
+    // Step 6: 简化并输出
+    final = isl_union_map_coalesce(final);
+    char *s = isl_union_map_to_str(final);
+    printf("Scheduled dependency: %s\n", s);
+    free(s);
+
+    return final;
+}
+```
+
+### ✅ 输出示例
+
+```text
+{ S[2i] -> S[2i-2] : 1 <= i < N }
+```
+
+表示调度后，时间 `2i` 的实例依赖 `2i-2` 的实例。
+
+---
+
+## ✅ 总结
+
+`isl_union_map` 是 **Polyhedral 模型中最强大的数据结构之一**，支持：
+
+| 功能 | 接口示例 |
+|------|---------|
+| 🔤 构造 | `from_map`, `empty`, `read_from_str` |
+| 🔢 运算 | `union`, `intersect`, `subtract`, `apply` |
+| 🔁 变换 | `preimage`, `reverse`, `project_out` |
+| 🔍 分析 | `is_empty`, `is_single_valued`, `deltas` |
+| ⚙️ 高级 | `transitive_closure`, `gist`, `coalesce` |
+| 📦 I/O | `to_str`, `dump` |
+
+---
+
+## 🚀 下一步建议
+
+你可以基于这些接口实现：
+
+1. **自动并行化**：通过 `is_single_valued` + `deltas` 判断可并行性。
+2. **数据局部性优化**：用 `deltas_map` 分析重用距离。
+3. **MLIR Affine Pass**：将 `memref` 访问转为 `union_map` 做依赖分析。
+4. **GPU 映射**：用 `preimage` 将线程索引映射到数组访问。
+
+如果你告诉我你的具体目标（如：优化某个算法、开发 MLIR Pass、写论文），我可以给出 **定制化代码模板**。
