@@ -1,0 +1,194 @@
+非常棒的请求！你给出的是一组来自 `isl_map_private.h` 或类似内部头文件的 **ISL（Integer Set Library）核心构造与操作函数**。我们将这些接口按照 **处理逻辑（操作类型）** 进行分组，允许函数重复出现在多个组中（因为一个函数可能服务于多个目的），并对每个函数进行 **详细注释**，说明其作用、参数含义和使用场景。
+
+---
+
+## 🔹 分组 1：基础集合/映射的创建与内存分配
+
+> **处理逻辑**：为 `isl_basic_set` 或 `isl_basic_map` 分配内存空间，初始化结构体字段，准备后续添加约束。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_set *isl_basic_set_alloc(isl_ctx *ctx, unsigned nparam, unsigned dim, unsigned extra, unsigned n_eq, unsigned n_ineq);` | 创建一个新的 `isl_basic_set`。参数：<br> - `ctx`: 上下文<br> - `nparam`: 参数数量<br> - `dim`: 变量维度（如 i,j）<br> - `extra`: 额外保留空间（用于未来插入 div 或维度）<br> - `n_eq`: 预分配等式数量<br> - `n_ineq`: 预分配不等式数量<br> 返回一个空的 `basic_set`，但已分配好约束数组空间。 |
+| `__isl_give isl_basic_map *isl_basic_map_alloc(isl_ctx *ctx, unsigned nparam, unsigned in, unsigned out, unsigned extra, unsigned n_eq, unsigned n_ineq);` | 类似上者，但用于 `isl_basic_map`（有输入/输出维度）。`in` 是输入维度数，`out` 是输出维度数。 |
+| `__isl_give isl_basic_set *isl_basic_set_alloc_space(__isl_take isl_space *space, unsigned extra, unsigned n_eq, unsigned n_ineq);` | 使用已构建的 `isl_space` 来创建 `basic_set`。更高级的接口，空间结构已定义好。 |
+| `__isl_give isl_basic_map *isl_basic_map_alloc_space(__isl_take isl_space *space, unsigned extra, unsigned n_eq, unsigned n_ineq);` | 同上，用于 `basic_map`。 |
+
+---
+
+## 🔹 分组 2：扩展预分配空间（动态增长）
+
+> **处理逻辑**：在已有的 `basic_set/map` 基础上，扩展其可容纳的约束或维度数量，避免频繁 realloc。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_set *isl_basic_set_extend_constraints(__isl_take isl_basic_set *base, unsigned n_eq, unsigned n_ineq);` | 扩展 `base` 的等式和不等式数组容量，但不立即添加约束。用于预估后续要加很多约束时优化性能。 |
+| `__isl_give isl_basic_map *isl_basic_map_extend_constraints(__isl_take isl_basic_map *base, unsigned n_eq, unsigned n_ineq);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_basic_map *isl_basic_map_extend(__isl_take isl_basic_map *base, unsigned extra, unsigned n_eq, unsigned n_ineq);` | 更全面的扩展：可同时扩展 `extra` 空间（如 div）、等式、不等式。 |
+| `__isl_give isl_basic_set *isl_basic_set_extend(__isl_take isl_basic_set *base, unsigned extra, unsigned n_eq, unsigned n_ineq);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_map *isl_map_grow(__isl_take isl_map *map, int n);` | 扩展 `isl_map` 的 `p[]` 数组容量，使其能容纳更多 `basic_map`。`n` 是新增容量。 |
+| `__isl_give isl_set *isl_set_grow(__isl_take isl_set *set, int n);` | 同上，用于 `isl_set`。 |
+
+---
+
+## 🔹 分组 3：约束的动态添加与管理
+
+> **处理逻辑**：向 `basic_set/map` 中动态添加等式或不等式约束，并管理其内部数组。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `int isl_basic_map_alloc_equality(__isl_keep isl_basic_map *bmap);` | 请求为 `bmap` 分配一个新的等式槽位（索引），返回其位置（>=0），失败返回 -1。不初始化内容。 |
+| `int isl_basic_set_alloc_equality(__isl_keep isl_basic_set *bset);` | 同上，用于 `basic_set`。 |
+| `int isl_basic_map_alloc_inequality(__isl_keep isl_basic_map *bmap);` | 请求分配一个不等式槽位，返回索引。 |
+| `int isl_basic_set_alloc_inequality(__isl_keep isl_basic_set *bset);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_basic_set *isl_basic_set_add_eq(__isl_take isl_basic_set *bset, isl_int *eq);` | 将系数数组 `eq` 作为新等式添加到 `bset`。`eq` 格式：[cst, p0..pn, v0..vm] |
+| `__isl_give isl_basic_map *isl_basic_map_add_eq(__isl_take isl_basic_map *bmap, isl_int *eq);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_basic_set *isl_basic_set_add_ineq(__isl_take isl_basic_set *bset, isl_int *ineq);` | 添加一个不等式（≥0 形式）。 |
+| `__isl_give isl_basic_map *isl_basic_map_add_ineq(__isl_take isl_basic_map *bmap, isl_int *ineq);` | 同上，用于 `basic_map`。 |
+| `void isl_basic_map_inequality_to_equality(__isl_keep isl_basic_map *bmap, unsigned pos);` | 将位置 `pos` 的不等式**转换为等式**（通常用于检测到两个不等式互为相反数时）。 |
+| `int isl_basic_map_drop_equality(__isl_keep isl_basic_map *bmap, unsigned pos);` | 删除位置 `pos` 的等式，将其移至末尾并减少计数。 |
+| `int isl_basic_set_drop_inequality(__isl_keep isl_basic_set *bset, unsigned pos);`<br>`int isl_basic_map_drop_inequality(__isl_keep isl_basic_map *bmap, unsigned pos);` | 删除指定位置的不等式。 |
+
+---
+
+## 🔹 分组 4：除法（Div / Floor Expression）管理
+
+> **处理逻辑**：管理 `basic_map/set` 中的 `div` 表达式（形如 `e = ⌊(a·x + b)/d⌋`），用于表示向下取整或模运算。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `int isl_basic_map_alloc_div(__isl_keep isl_basic_map *bmap);` | 为 `bmap` 分配一个新的 `div` 槽位，返回其索引（在 `div` 数组中的位置）。 |
+| `int isl_basic_set_alloc_div(__isl_keep isl_basic_set *bset);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_basic_map *isl_basic_map_insert_div(__isl_take isl_basic_map *bmap, int pos, __isl_keep isl_vec *div);` | 在位置 `pos` 插入一个 `div` 表达式（`div` 向量格式：[d, b, a0...an]）。 |
+| `isl_stat isl_basic_map_free_div(__isl_keep isl_basic_map *bmap, unsigned n);` | 标记第 `n` 个 `div` 为空闲（不释放内存，仅标记）。 |
+| `__isl_give isl_basic_map *isl_basic_map_drop_div(__isl_take isl_basic_map *bmap, unsigned div);` | 从 `bmap` 中移除第 `div` 个 `div` 表达式，并调整约束引用。 |
+
+---
+
+## 🔹 分组 5：最终化与规范化（Finalize & Simplify）
+
+> **处理逻辑**：在添加完所有约束后，对 `basic_set/map` 进行清理、排序、去重、规范化，使其成为“标准形式”。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_set *isl_basic_set_finalize(__isl_take isl_basic_set *bset);` | 标记 `bset` 为“最终状态”：移除未使用的约束槽位，排序约束，准备用于后续操作（如交集）。 |
+| `__isl_give isl_basic_map *isl_basic_map_finalize(__isl_take isl_basic_map *bmap);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_basic_map *isl_basic_map_mark_final(__isl_take isl_basic_map *bmap);` | 仅标记为 final，不进行实际清理（性能优化）。 |
+| `__isl_give isl_basic_set *isl_basic_set_simplify(__isl_take isl_basic_set *bset);` | 尝试简化 `bset`：如检测隐含等式、移除冗余不等式等。 |
+| `__isl_give isl_basic_map *isl_basic_map_simplify(__isl_take isl_basic_map *bmap);` | 同上，用于 `basic_map`。 |
+
+---
+
+## 🔹 分组 6：集合/映射的合并与构建
+
+> **处理逻辑**：将多个 `basic_set/map` 合并到一个 `set/map` 中，构建非凸集合。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_set *isl_set_add_basic_set(__isl_take isl_set *set, __isl_take isl_basic_set *bset);` | 将 `bset` 添加到 `set` 的 `p[]` 数组中。若 `set` 为空则创建；否则扩展并追加。 |
+| `__isl_give isl_map *isl_map_add_basic_map(__isl_take isl_map *map, __isl_take isl_basic_map *bmap);` | 同上，用于 `isl_map`。 |
+
+---
+
+## 🔹 分组 7：空间（Space）管理与重置
+
+> **处理逻辑**：获取或替换 `basic_set/map` 的维度结构（参数、变量名等）。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_keep isl_space *isl_basic_map_peek_space(__isl_keep const isl_basic_map *bmap);` | 获取 `bmap` 的空间结构（不增加引用）。 |
+| `__isl_keep isl_space *isl_basic_set_peek_space(__isl_keep isl_basic_set *bset);`<br>`__isl_keep isl_space *isl_map_peek_space(__isl_keep const isl_map *map);`<br>`__isl_keep isl_space *isl_set_peek_space(__isl_keep isl_set *set);` | 同上，用于其他类型。 |
+| `__isl_give isl_basic_set *isl_basic_set_reset_space(__isl_take isl_basic_set *bset, __isl_take isl_space *space);` | 将 `bset` 的空间结构替换为 `space`。用于对齐维度。 |
+| `__isl_give isl_basic_map *isl_basic_map_reset_space(__isl_take isl_basic_map *bmap, __isl_take isl_space *space);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_map *isl_map_reset_space(__isl_take isl_map *map, __isl_take isl_space *space);` | 替换整个 `map` 的空间结构。 |
+| `__isl_give isl_map *isl_map_reset_equal_dim_space(__isl_take isl_map *map, __isl_take isl_space *space);` | 重置空间，但要求输入/输出维度数匹配。 |
+| `__isl_give isl_basic_set *isl_basic_set_from_underlying_set(__isl_take isl_basic_set *bset, __isl_take isl_basic_set *like);` | 将 `bset` 的空间结构改为与 `like` 相同（深层对齐）。 |
+
+---
+
+## 🔹 分组 8：维度偏移与索引计算
+
+> **处理逻辑**：计算某个维度类型（如参数、输入、输出）在约束向量中的起始偏移。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `isl_size isl_basic_map_var_offset(__isl_keep isl_basic_map *bmap, enum isl_dim_type type);` | 返回 `type` 类型变量在约束向量中的起始索引（考虑参数、输入等前置维度）。 |
+| `isl_size isl_basic_set_var_offset(__isl_keep isl_basic_set *bset, enum isl_dim_type type);` | 同上，用于 `basic_set`。 |
+| `unsigned isl_basic_map_offset(__isl_keep isl_basic_map *bmap, enum isl_dim_type type);`<br>`unsigned isl_basic_set_offset(__isl_keep isl_basic_set *bset, enum isl_dim_type type);` | 同上，返回 `unsigned` 类型。 |
+
+---
+
+## 🔹 分组 9：兼容性与类型检查
+
+> **处理逻辑**：检查两个集合或映射是否具有兼容的维度结构，能否进行交集、并集等操作。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `isl_bool isl_basic_map_may_be_set(__isl_keep isl_basic_map *bmap);` | 判断 `bmap` 是否可以视为一个集合（即输入=输出，且无函数语义）。 |
+| `int isl_map_may_be_set(__isl_keep isl_map *map);` | 判断整个 `map` 是否可视为集合。 |
+| `isl_bool isl_map_compatible_domain(__isl_keep isl_map *map, __isl_keep isl_set *set);` | 检查 `map` 的域（domain）与 `set` 是否兼容（参数和输入维度匹配）。 |
+| `isl_bool isl_basic_map_compatible_domain(__isl_keep isl_basic_map *bmap, __isl_keep isl_basic_set *bset);` | 同上，用于 `basic` 类型。 |
+| `isl_bool isl_basic_map_compatible_range(__isl_keep isl_basic_map *bmap, __isl_keep isl_basic_set *bset);` | 检查 `bmap` 的值域（range）与 `bset` 是否兼容。 |
+
+---
+
+## 🔹 分组 10：复制与重排（Reordering）
+
+> **处理逻辑**：复制结构或将维度重新排列。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_set *isl_basic_set_dup(__isl_keep isl_basic_set *bset);` | 深拷贝一个 `basic_set`（增加引用计数或复制）。 |
+| `__isl_give isl_map *isl_map_dup(__isl_keep isl_map *map);` | 深拷贝整个 `map`。 |
+| `__isl_give isl_map *isl_map_realign(__isl_take isl_map *map, __isl_take isl_reordering *r);` | 根据重排序 `r` 调整 `map` 的维度顺序（如参数重排）。 |
+| `__isl_give isl_set *isl_set_realign(__isl_take isl_set *set, __isl_take isl_reordering *r);` | 同上，用于 `set`。 |
+
+---
+
+## 🔹 分组 11：成员判断（Containment）
+
+> **处理逻辑**：检查某个点是否属于集合或映射。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `isl_bool isl_basic_set_contains(__isl_keep isl_basic_set *bset, __isl_keep isl_vec *vec);` | 检查向量 `vec`（代表一个点）是否满足 `bset` 的所有约束。 |
+| `isl_bool isl_basic_map_contains(__isl_keep isl_basic_map *bmap, __isl_keep isl_vec *vec);` | 检查点 `vec` 是否在 `bmap` 中（`vec` 格式：[in..., out...]）。 |
+
+---
+
+## 🔹 分组 12：重置维度类型
+
+> **处理逻辑**：将 `basic_map/set` 的维度类型信息重置（如清除名字、对齐结构）。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_reset(__isl_take isl_basic_map *bmap, enum isl_dim_type type);` | 重置 `bmap` 的 `type` 类型维度信息（如名字、对齐）。 |
+| `__isl_give isl_map *isl_map_reset(__isl_take isl_map *map, enum isl_dim_type type);` | 重置整个 `map` 的指定维度类型信息。 |
+
+---
+
+## ✅ 总结：函数设计模式
+
+| 组别 | 核心目标 |
+|------|--------|
+| 创建/分配 | 构建初始结构 |
+| 扩展 | 动态增长，避免 realloc |
+| 约束管理 | 添加、删除、转换约束 |
+| Div 管理 | 处理 floor 表达式 |
+| 最终化 | 规范化、排序、去重 |
+| 合并 | 构建非凸集合 |
+| 空间管理 | 维度对齐与重命名 |
+| 偏移计算 | 约束向量索引定位 |
+| 兼容性检查 | 安全操作前提 |
+| 复制/重排 | 结构变换 |
+| 成员判断 | 点查询 |
+| 重置 | 清除元信息 |
+
+---
+
+这些函数构成了 ISL **多面体构造引擎** 的底层骨架。理解它们有助于：
+- 调试 ISL 行为
+- 实现自定义构造逻辑
+- 优化性能（如预分配）
+- 贡献 ISL 源码
+
+如果你需要，我可以为你画出 **`isl_basic_set` 构造流程图** 或 **约束添加的生命周期示例代码**。是否需要？
