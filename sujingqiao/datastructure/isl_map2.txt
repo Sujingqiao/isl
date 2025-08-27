@@ -1,0 +1,206 @@
+非常好！你提供的是一组 **ISL（Integer Set Library）中关于 `isl_basic_set` 和 `isl_basic_map` 的高级操作、优化、归一化、消除、简化和结构管理** 的核心函数。我们将这些函数按照 **处理逻辑（操作目的）** 进行分组，允许函数重复出现在多个组中（因为一个函数可能服务于多个目的），并对每个函数进行 **详细注释**，说明其作用、参数含义和使用场景。
+
+---
+
+## 🔹 分组 1：约束收紧与松弛（Tightening & Relaxation）
+
+> **处理逻辑**：调整约束边界，使其更紧或更松，用于近似或数值稳定性。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_set *isl_basic_set_tighten_outward(__isl_take isl_basic_set *bset, __isl_keep isl_vec *vec);` | **向外收紧** `bset` 的边界，使得 `vec` 所代表的点刚好落在集合内部或边界上。用于修复由于数值误差导致点被错误排除的情况。 |
+
+---
+
+## 🔹 分组 2：约束取反与比较
+
+> **处理逻辑**：对约束进行逻辑操作或比较，用于检测冗余、对称性等。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_inequality_negate(__isl_take isl_basic_map *bmap, unsigned pos);` | 将 `bmap` 中位置 `pos` 的不等式取反（即 `≥0` 变为 `≤-1`），用于构造补集或检测矛盾。 |
+| `int isl_basic_map_constraint_cmp(__isl_keep isl_basic_map *bmap, isl_int *c1, isl_int *c2);` | 比较两个约束向量 `c1` 和 `c2` 的“字典序”，用于排序。 |
+| `int isl_basic_map_plain_cmp(__isl_keep isl_basic_map *bmap1, __isl_keep isl_basic_map *bmap2);` | 比较两个 `basic_map` 是否“完全相同”（包括约束顺序、div 等），返回 -1,0,1。 |
+| `isl_bool isl_basic_map_plain_is_equal(__isl_keep isl_basic_map *bmap1, __isl_keep isl_basic_map *bmap2);` | 判断两个 `basic_map` 是否完全相等（结构、约束、div 都相同）。 |
+
+---
+
+## 🔹 分组 3：高斯消元与约束简化（Gauss Elimination）
+
+> **处理逻辑**：使用高斯消元法消除变量或简化约束系统，常用于变量消除或冗余检测。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_gauss(__isl_take isl_basic_map *bmap, int *progress);` | 对 `bmap` 的等式系统进行**高斯消元**，消除变量，简化系统。`progress` 输出是否发生简化。 |
+| `__isl_give isl_basic_set *isl_basic_set_gauss(__isl_take isl_basic_set *bset, int *progress);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_basic_map *isl_basic_map_gauss5(__isl_take isl_basic_map *bmap, int *progress, isl_stat (*swap)(unsigned a, unsigned b, void *user), isl_stat (*drop)(unsigned n, void *user), void *user);` | 带回调的高斯消元，允许用户干预行交换或约束删除，用于自定义简化策略。 |
+
+---
+
+## 🔹 分组 4：约束排序与归一化（Sorting & Normalization）
+
+> **处理逻辑**：对约束或 `div` 进行排序，或归一化系数，使表达式标准化，便于比较或合并。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_sort_constraints(__isl_take isl_basic_map *bmap);` | 将 `bmap` 的等式和不等式分别按字典序排序，便于后续比较或去重。 |
+| `__isl_give isl_basic_set *isl_basic_set_sort_constraints(__isl_take isl_basic_set *bset);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_basic_map *isl_basic_map_normalize_constraints(__isl_take isl_basic_map *bmap);` | 归一化所有约束的系数：使第一个非零系数为正，并约去最大公约数。 |
+| `__isl_give isl_basic_set *isl_basic_set_normalize_constraints(__isl_take isl_basic_set *bset);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_basic_set *isl_basic_set_sort_divs(__isl_take isl_basic_set *bset);` | 对 `bset` 中的 `div` 表达式进行排序。 |
+| `__isl_give isl_basic_map *isl_basic_map_sort_divs(__isl_take isl_basic_map *bmap);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_map *isl_map_sort_divs(__isl_take isl_map *map);` | 对整个 `map` 中所有 `basic_map` 的 `div` 进行排序。 |
+
+---
+
+## 🔹 分组 5：Div（Floor Expression）管理与优化
+
+> **处理逻辑**：处理和优化 `div` 表达式，包括对齐、消除、添加约束等。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_swap_div(__isl_take isl_basic_map *bmap, int a, int b);` | 交换 `bmap` 中第 `a` 和第 `b` 个 `div` 的位置。 |
+| `__isl_give isl_basic_map *isl_basic_map_order_divs(__isl_take isl_basic_map *bmap);` | 对 `div` 按依赖关系排序，确保前向依赖正确。 |
+| `__isl_give isl_map *isl_map_order_divs(__isl_take isl_map *map);` | 对整个 `map` 中所有 `basic_map` 的 `div` 排序。 |
+| `__isl_give isl_basic_map *isl_basic_map_align_divs(__isl_take isl_basic_map *dst, __isl_keep isl_basic_map *src);` | 将 `dst` 的 `div` 结构对齐到 `src`，便于后续操作（如交集）。 |
+| `__isl_give isl_map *isl_map_align_divs_to_basic_map_list(__isl_take isl_map *map, __isl_keep isl_basic_map_list *list);` | 将 `map` 的所有 `basic_map` 的 `div` 对齐到 `list` 中的结构。 |
+| `__isl_give isl_basic_map_list *isl_basic_map_list_align_divs_to_basic_map(__isl_take isl_basic_map_list *list, __isl_keep isl_basic_map *bmap);` | 将 `list` 中所有 `basic_map` 的 `div` 对齐到 `bmap` 的结构。 |
+| `__isl_give isl_map *isl_map_align_divs_internal(__isl_take isl_map *map);` | 内部函数，统一 `map` 内所有 `basic_map` 的 `div` 结构。 |
+| `__isl_give isl_basic_map *isl_basic_map_add_div_constraint(__isl_take isl_basic_map *bmap, unsigned div, int sign);` | 为第 `div` 个 `div` 添加一个约束（如 `e ≥ ...` 或 `e ≤ ...`），`sign` 控制方向。 |
+| `__isl_give isl_basic_map *isl_basic_map_add_div_constraints(__isl_take isl_basic_map *bmap, unsigned div);` | 为 `div` 添加所有标准的上下界约束（`e ≥ lower`, `e ≤ upper`）。 |
+| `__isl_give isl_basic_map *isl_basic_map_add_known_div_constraints(__isl_take isl_basic_map *bmap);` | 为所有 `div` 添加已知的约束（如定义式本身）。 |
+| `__isl_give isl_basic_map *isl_basic_map_drop_redundant_divs(__isl_take isl_basic_map *bmap);` | 移除那些被其他约束隐含或冗余的 `div` 表达式。 |
+| `__isl_give isl_basic_map *isl_basic_map_eliminate_pure_unit_divs(__isl_take isl_basic_map *bmap);` | 移除形式为 `e = ⌊c/d⌋` 的 `div`（常数除法），直接替换为常量。 |
+
+---
+
+## 🔹 分组 6：变量与维度消除（Variable Elimination）
+
+> **处理逻辑**：从集合或映射中消除某些变量，实现投影或量化。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_eliminate_vars(__isl_take isl_basic_map *bmap, unsigned pos, unsigned n);` | 从 `bmap` 中消除从 `pos` 开始的 `n` 个变量（通常是存在量词消除）。 |
+| `__isl_give isl_basic_set *isl_basic_set_eliminate_vars(__isl_take isl_basic_set *bset, unsigned pos, unsigned n);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_map *isl_map_eliminate(__isl_take isl_map *map, enum isl_dim_type type, unsigned first, unsigned n);` | 消除 `map` 中 `type` 类型从 `first` 开始的 `n` 个变量。 |
+| `__isl_give isl_set *isl_set_eliminate(__isl_take isl_set *set, enum isl_dim_type type, unsigned first, unsigned n);` | 同上，用于 `set`。 |
+| `__isl_give isl_map *isl_map_project_onto(__isl_take isl_map *map, enum isl_dim_type type, unsigned first, unsigned n);` | 将 `map` 投影到指定维度上（保留这些维度，消除其他）。 |
+
+---
+
+## 🔹 分组 7：约束删除与维度删除
+
+> **处理逻辑**：删除涉及某些变量的约束，或直接删除维度。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_drop_constraints_involving(__isl_take isl_basic_map *bmap, unsigned first, unsigned n);` | 删除所有涉及从 `first` 开始的 `n` 个变量的约束。 |
+| `__isl_give isl_basic_set *isl_basic_set_drop_constraints_involving(__isl_take isl_basic_set *bset, unsigned first, unsigned n);` | 同上，用于 `basic_set`。 |
+| `__isl_give isl_basic_set *isl_basic_set_drop_constraints_involving_unknown_divs(__isl_take isl_basic_set *bset);` | 删除所有涉及未知 `div`（未定义或未对齐）的约束。 |
+| `__isl_give isl_basic_map *isl_basic_map_drop_constraints_involving_unknown_divs(__isl_take isl_basic_map *bmap);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_map *isl_map_drop_constraints_involving_unknown_divs(__isl_take isl_map *map);` | 对整个 `map` 执行上述操作。 |
+| `__isl_give isl_basic_map *isl_basic_map_drop_unrelated_constraints(__isl_take isl_basic_map *bmap, __isl_take int *group);` | 删除与指定变量组无关的约束（用于分解问题）。 |
+| `__isl_give isl_basic_set *isl_basic_set_drop(__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned first, unsigned n);` | 删除 `bset` 中 `type` 类型从 `first` 开始的 `n` 个维度。 |
+| `__isl_give isl_basic_map *isl_basic_map_drop(__isl_take isl_basic_map *bmap, enum isl_dim_type type, unsigned first, unsigned n);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_set *isl_set_drop(__isl_take isl_set *set, enum isl_dim_type type, unsigned first, unsigned n);` | 同上，用于 `set`。 |
+| `__isl_give isl_map *isl_map_drop(__isl_take isl_map *map, enum isl_dim_type type, unsigned first, unsigned n);` | 同上，用于 `map`。 |
+| `__isl_give isl_basic_set *isl_basic_set_drop_dims(__isl_take isl_basic_set *bset, unsigned first, unsigned n);` | 删除 `bset` 中从 `first` 开始的 `n` 个维度（不指定类型，通常指参数或变量）。 |
+
+---
+
+## 🔹 分组 8：集合/映射清理与简化
+
+> **处理逻辑**：移除空集、重复部分，或对整个集合进行归一化。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_map *isl_map_remove_empty_parts(__isl_take isl_map *map);` | 移除 `map` 中所有为空的 `basic_map`。 |
+| `__isl_give isl_set *isl_set_remove_empty_parts(__isl_take isl_set *set);` | 同上，用于 `set`。 |
+| `__isl_give isl_map *isl_map_remove_obvious_duplicates(__isl_take isl_map *map);` | 移除 `map` 中明显重复的 `basic_map`（结构完全相同）。 |
+| `__isl_give isl_set *isl_set_normalize(__isl_take isl_set *set);` | 对 `set` 进行标准化处理：排序、去重、归一化等。 |
+
+---
+
+## 🔹 分组 9：隐式等式与约束推导
+
+> **处理逻辑**：从不等式系统中推导出隐含的等式。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_implicit_equalities(__isl_take isl_basic_map *bmap);` | 分析 `bmap` 的不等式系统，推导出所有**隐含的等式**（如 `x ≥ 5` 且 `x ≤ 5` ⇒ `x = 5`），并将其加入等式系统。 |
+
+---
+
+## 🔹 分组 10：底层集合转换（Underlying Set）
+
+> **处理逻辑**：将映射（map）转换为其底层的集合表示（忽略输入/输出语义）。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_set *isl_basic_map_underlying_set(__isl_take isl_basic_map *bmap);` | 将 `bmap` 转换为一个 `basic_set`，其空间包含所有输入和输出变量（即视为联合变量空间）。 |
+| `__isl_give isl_basic_set *isl_basic_set_underlying_set(__isl_take isl_basic_set *bset);` | 返回 `bset` 自身（恒等操作，接口统一）。 |
+| `__isl_give isl_basic_set_list *isl_basic_map_list_underlying_set(__isl_take isl_basic_map_list *list);` | 将 `list` 中所有 `basic_map` 转换为 `basic_set`。 |
+| `__isl_give isl_set *isl_map_underlying_set(__isl_take isl_map *map);` | 将整个 `map` 转换为 `set`（所有 `basic_map` → `basic_set`）。 |
+| `__isl_give isl_basic_map *isl_basic_map_overlying_set(__isl_take isl_basic_set *bset, __isl_take isl_basic_map *like);` | 将 `bset` 转换为 `basic_map`，其结构（如输入/输出划分）与 `like` 相同。 |
+
+---
+
+## 🔹 分组 11：副本管理（Copy-on-Write, COW）
+
+> **处理逻辑**：实现写时复制（Copy-on-Write），优化内存使用。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_set *isl_basic_set_cow(__isl_take isl_basic_set *bset);` | 如果 `bset` 被多处引用，返回其副本；否则返回原对象。用于在修改前确保不破坏共享数据。 |
+| `__isl_give isl_basic_map *isl_basic_map_cow(__isl_take isl_basic_map *bmap);` | 同上，用于 `basic_map`。 |
+| `__isl_give isl_set *isl_set_cow(__isl_take isl_set *set);` | 同上，用于 `set`。 |
+| `__isl_give isl_map *isl_map_cow(__isl_take isl_map *map);` | 同上，用于 `map`。 |
+| `isl_bool isl_basic_map_has_single_reference(__isl_keep isl_basic_map *bmap);` | 检查 `bmap` 是否只有一个引用（可用于判断是否可以直接修改）。 |
+
+---
+
+## 🔹 分组 12：哈希与唯一性
+
+> **处理逻辑**：计算哈希值，用于快速比较或缓存。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `uint32_t isl_basic_map_get_hash(__isl_keep isl_basic_map *bmap);` | 计算 `bmap` 的哈希值，用于快速查找或去重。 |
+
+---
+
+## 🔹 分组 13：空集与特殊状态
+
+> **处理逻辑**：将集合/映射设置为空。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_basic_map *isl_basic_map_set_to_empty(__isl_take isl_basic_map *bmap);` | 将 `bmap` 置为空集（删除所有约束）。 |
+| `__isl_give isl_basic_set *isl_basic_set_set_to_empty(__isl_take isl_basic_set *bset);` | 同上，用于 `basic_set`。 |
+
+---
+
+## 🔹 分组 14：列表操作与并集
+
+> **处理逻辑**：对 `basic_set_list` 进行操作。
+
+| 函数 | 详细注释 |
+|------|----------|
+| `__isl_give isl_set *isl_basic_set_list_union(__isl_take isl_basic_set_list *list);` | 将 `list` 中所有 `basic_set` 取并集，构造一个 `isl_set`。 |
+
+---
+
+## ✅ 总结：这些函数的用途
+
+这些函数构成了 ISL 的 **高级优化与代数操作引擎**，用于：
+
+- **变量消除**（量化）
+- **约束简化**（高斯消元、归一化）
+- **`div` 管理**（对齐、优化、消除）
+- **集合清理**（去空、去重）
+- **结构转换**（map ↔ set）
+- **性能优化**（COW、哈希）
+
+它们是 ISL 实现 **多面体模型优化、循环变换、依赖分析** 的核心支撑。
+
+如果你需要，我可以提供一个 **“如何使用这些函数进行变量消除” 的完整流程示例**，或者 **`div` 对齐的实际应用场景**。是否需要？
