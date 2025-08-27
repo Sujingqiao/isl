@@ -1,0 +1,268 @@
+非常棒的问题！你提供的是 **ISL 中 `aff`（仿射表达式）和 `pw_aff`（分段仿射函数）** 的核心操作接口，它们是 **循环变换、依赖分析、调度生成** 的数学基础。
+
+我们将这些接口按 **逻辑功能分组**，每组对应一种 **仿射表达式的构造与变换逻辑**，并详细注释每个接口的作用。最后用一个 **综合示例**：**实现循环边界重写（Loop Bound Rewriting）**。
+
+---
+
+## 📚 分组说明
+
+我们将接口分为 **7 大类**，每类对应一种仿射表达式处理逻辑：
+
+---
+
+### 🔹 分组 1：**仿射表达式（`isl_aff`）的创建**
+
+> 构造一个仿射函数：`aff = c₀ + Σ cᵢ·xᵢ + Σ dⱼ·⌊eⱼ⌋`
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_aff *isl_aff_alloc(__isl_take isl_local_space *ls)` | 分配一个仿射表达式，`ls` 定义了参数和变量空间（可能包含存在量词和除法）。 |
+| `__isl_give isl_aff *isl_aff_alloc_vec(__isl_take isl_local_space *ls, __isl_take isl_vec *v)` | 从向量 `v` 构造仿射表达式（向量格式：[constant, param_coeffs..., div_coeffs..., var_coeffs...]）。 |
+
+> ✅ **用途**：手动构造仿射函数（如 `i + 2*j`）。
+
+---
+
+### 🔹 分组 2：**仿射表达式（`isl_aff`）的修改**
+
+> 设置系数、常数项、域空间等。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_aff *isl_aff_set_constant(...)` | 设置常数项。 |
+| `__isl_give isl_aff *isl_aff_set_coefficient(...)` | 设置某个维度（参数/变量）的系数。 |
+| `__isl_give isl_aff *isl_aff_add_constant(...)` | 常数项加一个值。 |
+| `__isl_give isl_aff *isl_aff_reset_space_and_domain(...)` | 重置整个空间和域空间。 |
+| `__isl_give isl_aff *isl_aff_reset_domain_space(...)` | 仅重置域空间（domain space）。 |
+| `__isl_give isl_aff *isl_aff_realign_domain(...)` | 使用重排序 `r` 对齐域空间（如变量重命名）。 |
+
+> ✅ **用途**：修改仿射表达式以适应新的上下文（如循环重索引）。
+
+---
+
+### 🔹 分组 3：**简化与规范化**
+
+> 去除冗余、标准化表达式。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_aff *isl_aff_remove_unused_divs(...)` | 移除未使用的除法（division）项。 |
+| `__isl_give isl_aff *isl_aff_normalize(...)` | 标准化：使系数互质，常数项非负。 |
+| `__isl_give isl_aff *isl_aff_expand_divs(...)` | 展开除法项（如 `⌊i/32⌋` → 新变量 `ii`）。 |
+| `__isl_give isl_aff *isl_aff_scale_down(...)` | 将整个仿射表达式除以一个整数（要求整除）。 |
+
+> ✅ **用途**：优化表达式，便于后续分析或代码生成。
+
+---
+
+### 🔹 分组 4：**分段仿射函数（`isl_pw_aff`）的构造与操作**
+
+> 表示在不同区域具有不同仿射表达式的函数。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_pw_aff *isl_pw_aff_alloc_size(...)` | 预分配一个分段仿射函数（带空间和初始容量）。 |
+| `__isl_give isl_pw_aff *isl_pw_aff_add_disjoint(...)` | 合并两个**定义域不相交**的分段仿射函数。 |
+| `__isl_give isl_pw_aff *isl_pw_aff_union_opt(...)` | 合并两个分段仿射函数，取 `max` 或 `min`（用于 `max(i,j)` 这类操作）。 |
+| `__isl_give isl_pw_aff *isl_pw_aff_domain_factor_domain(...)` | 去除定义域中的冗余维度（如存在量词）。 |
+| `__isl_give isl_pw_aff *isl_pw_aff_reset_domain_space(...)` | 重置定义域空间。 |
+| `__isl_give isl_pw_aff *isl_pw_aff_set_rational(...)` | 标记为有理数函数（支持分数系数）。 |
+
+> ✅ **用途**：表示 `max`, `min`, `clamp`, `条件边界` 等非线性但分段线性的函数。
+
+---
+
+### 🔹 分组 5：**多输出仿射映射（`isl_multi_aff`, `isl_pw_multi_aff`）**
+
+> 表示多个仿射函数的向量（如调度向量 `[i, j]`）。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_multi_aff *isl_multi_aff_from_aff_mat(...)` | 从矩阵构造多仿射映射（每行一个 `aff`）。 |
+| `__isl_give isl_multi_aff *isl_multi_aff_align_divs(...)` | 对齐多个 `aff` 的除法变量（用于组合）。 |
+| `__isl_give isl_pw_multi_aff *isl_pw_multi_aff_add_disjoint(...)` | 合并两个定义域不相交的分段多仿射函数。 |
+| `__isl_give isl_pw_multi_aff *isl_pw_multi_aff_project_out(...)` | 投影（移除）某些维度（如 `project_out(i)` → 只保留 `j`）。 |
+| `__isl_give isl_pw_multi_aff *isl_pw_multi_aff_move_dims(...)` | 移动维度位置（如将 `i` 移到 `j` 前面）。 |
+
+> ✅ **用途**：构建调度向量、重排循环顺序、投影分析。
+
+---
+
+### 🔹 分组 6：**代入与重写（Substitution & Rewriting）**
+
+> 用一个表达式替换变量。
+
+| 接口 | 说明 |
+|------|------|
+| `__isl_give isl_aff *isl_aff_substitute_equalities(...)` | 在 `aff` 中代入等式约束（如 `i = j + 1`）。 |
+| `__isl_give isl_pw_multi_aff *isl_pw_multi_aff_substitute(...)` | 在分段多仿射函数中，用 `subs` 替换某个变量。 |
+| `isl_seq_preimage(...)` | 计算仿射映射的“前像”（preimage），用于逆映射。 |
+
+> ✅ **用途**：循环重索引、消除变量、依赖重写。
+
+---
+
+### 🔹 分组 7：**比较与验证**
+
+> 比较、检查参数一致性。
+
+| 接口 | 说明 |
+|------|------|
+| `int isl_aff_plain_cmp(...)` | 比较两个 `aff` 是否相等（结构比较）。 |
+| `isl_bool isl_aff_matching_params(...)` | 检查 `aff` 和 `space` 的参数是否匹配。 |
+| `isl_stat isl_aff_check_match_domain_space(...)` | 断言检查域空间是否匹配。 |
+| `isl_stat isl_pw_aff_check_named_params(...)` | 检查分段仿射函数的参数命名是否一致。 |
+
+> ✅ **用途**：调试、类型安全、Pass 验证。
+
+---
+
+## 🧩 综合示例：**循环边界重写（Loop Bound Rewriting）**
+
+我们要将以下循环：
+
+```c
+for (i = max(0, j-2); i < min(N, j+2); i++)
+  A[i][j] = ...
+```
+
+转换为：
+
+```c
+for (i = 0; i < N; i++)
+  if (i >= j-2 && i < j+2)
+    A[i][j] = ...
+```
+
+即：**将复杂边界重写为简单边界 + 条件判断**。
+
+### ✅ 实现代码
+
+```c
+#include <isl/aff.h>
+#include <isl/set.h>
+#include <isl/pw_aff.h>
+#include <isl/constraint.h>
+
+// 输入：原始循环域 { S[i,j] : 0 <= j < M and max(0, j-2) <= i < min(N, j+2) }
+__isl_give isl_set *rewrite_loop_bounds(isl_ctx *ctx) {
+    // Step 1: 构造参数空间
+    isl_space *param_space = isl_space_set_alloc(ctx, 1, 2); // [N,M]
+    param_space = isl_space_set_dim_name(param_space, isl_dim_param, 0, "N");
+    param_space = isl_space_set_dim_name(param_space, isl_dim_param, 1, "M");
+
+    // Step 2: 构造变量空间
+    isl_space *dim_space = isl_space_set_alloc(ctx, 0, 2); // i,j
+    dim_space = isl_space_set_dim_name(dim_space, isl_dim_set, 0, "i");
+    dim_space = isl_space_set_dim_name(dim_space, isl_dim_set, 1, "j");
+
+    // Step 3: 构造分段仿射函数 max(0, j-2)
+    isl_local_space *ls = isl_local_space_from_space(isl_space_copy(param_space), isl_space_copy(dim_space));
+    isl_aff *aff0 = isl_aff_zero_on_domain(isl_local_space_copy(ls)); // 0
+    isl_aff *aff_j2 = isl_aff_alloc(ls); // j - 2
+    aff_j2 = isl_aff_set_coefficient(aff_j2, isl_dim_set, 1, 1); // j
+    aff_j2 = isl_aff_add_constant(aff_j2, -2);
+
+    isl_pw_aff *pw_max = isl_pw_aff_alloc_size(isl_space_copy(param_space), 2);
+    // 区域1: j-2 >= 0 -> max = j-2
+    isl_set *dom1 = isl_set_from_str(ctx, "[N,M] -> { [i,j] : j >= 2 }");
+    pw_max = isl_pw_aff_add_disjoint(pw_max, isl_pw_aff_from_aff_on_domain(aff_j2, isl_set_copy(dom1)));
+    // 区域2: j-2 < 0 -> max = 0
+    isl_set *dom2 = isl_set_from_str(ctx, "[N,M] -> { [i,j] : j < 2 }");
+    pw_max = isl_pw_aff_add_disjoint(pw_max, isl_pw_aff_from_aff_on_domain(aff0, isl_set_copy(dom2)));
+
+    // Step 4: 构造 min(N, j+2)
+    isl_aff *aff_N = isl_aff_var_on_domain(isl_local_space_copy(ls), isl_dim_param, 0); // N
+    isl_aff *aff_j2p = isl_aff_alloc(isl_local_space_copy(ls));
+    aff_j2p = isl_aff_set_coefficient(aff_j2p, isl_dim_set, 1, 1); // j
+    aff_j2p = isl_aff_add_constant(aff_j2p, 2);
+
+    isl_pw_aff *pw_min = isl_pw_aff_union_opt(
+        isl_pw_aff_from_aff_on_domain(aff_N, isl_set_universe(isl_space_copy(param_space))),
+        isl_pw_aff_from_aff_on_domain(aff_j2p, isl_set_universe(isl_space_copy(param_space))),
+        0  // 0 = min
+    );
+
+    // Step 5: 构造新域：简单边界 + 条件
+    isl_set *new_domain = isl_set_from_str(ctx,
+        "[N,M] -> { [i,j] : 0 <= i < N and 0 <= j < M }"
+    );
+    isl_set *condition = isl_set_from_str(ctx,
+        "[N,M] -> { [i,j] : i >= j - 2 and i < j + 2 }"
+    );
+    new_domain = isl_set_intersect(new_domain, condition);
+
+    // 清理
+    isl_pw_aff_free(pw_max);
+    isl_pw_aff_free(pw_min);
+
+    return new_domain;
+}
+```
+
+### ✅ 输出
+
+```text
+{ S[i,j] : 0 <= i < N and 0 <= j < M and i >= j - 2 and i < j + 2 }
+```
+
+对应代码：
+
+```c
+for (i = 0; i < N; i++) {
+  for (j = 0; j < M; j++) {
+    if (i >= j - 2 && i < j + 2) {
+      A[i][j] = ...;
+    }
+  }
+}
+```
+
+---
+
+## 📊 接口使用场景总结
+
+| 接口 | 典型用途 |
+|------|---------|
+| `isl_aff_set_coefficient` | 构造仿射表达式（如 `i + 2*j`） |
+| `isl_pw_aff_union_opt` | 实现 `max`, `min` |
+| `isl_pw_multi_aff_substitute` | 循环重索引（`i' = i - j`） |
+| `isl_aff_expand_divs` | 分块展开（`i = 32*ii + i_in`） |
+| `isl_pw_aff_add_disjoint` | 构造分段函数 |
+| `isl_aff_normalize` | 标准化调度表达式 |
+
+---
+
+## 🔄 工作流程图
+
+```mermaid
+graph TD
+    A[原始边界] --> B[构造 pw_aff max/min]
+    B --> C[isl_pw_aff_union_opt]
+    C --> D[重写为简单边界]
+    D --> E[添加条件约束]
+    E --> F[生成新循环域]
+```
+
+---
+
+## ✅ 总结
+
+你提供的 `isl_aff` / `isl_pw_aff` 接口是 **ISL 数学表达式的基石**，它们支持：
+
+- 🧮 任意仿射表达式构造
+- 🧱 分段函数（`max`, `min`, `clamp`）
+- 🔁 变量代入与重写
+- 🎯 循环边界优化、分块、tiling
+
+这些接口是 **MLIR Affine Dialect** 中 `affine.for`, `affine.if`, `affine.min/max` 的底层实现。
+
+---
+
+是否希望我：
+
+1. ✅ 将此边界重写集成到 **MLIR Affine Pass**？
+2. ✅ 实现 **自动分块 + 边界处理**？
+3. ✅ 提供 **GPU 线程映射** 中的 `pw_aff` 使用示例？
+
+请告诉我你的目标（编译器开发 / 高性能计算 / 学术研究），我可以继续深入。
