@@ -1,0 +1,307 @@
+以下是对你提供的 `isl_space` 相关接口的**详细分组与注释说明**。这些函数属于 **ISL (Integer Set Library)**，用于处理整数集、关系、映射等抽象代数结构中的“空间”（`isl_space`）概念。`isl_space` 本质上描述了某个集合或映射的维度结构（参数、输入、输出、局部变量等），包括命名、嵌套、哈希、校验等功能。
+
+我们将这些接口按功能逻辑进行分组，每组代表一种处理逻辑，并为每个函数提供详细注释。
+
+---
+
+## 🧩 分组 1：空间的复制与写时拷贝（Copy-on-Write）
+
+> 处理 `isl_space` 的内存管理与共享机制，确保在修改前拥有独占所有权。
+
+```c
+__isl_give isl_space *isl_space_cow(__isl_take isl_space *space);
+```
+- **作用**：实现写时拷贝（Copy-on-Write）语义。
+- **说明**：如果该 `space` 被多个引用共享，则复制一份新的实例；否则直接返回原指针。这是 ISL 内部优化机制，保证在修改前不会影响其他使用者。
+- **使用场景**：任何需要修改 `isl_space` 前应调用此函数以确保独占性。
+
+---
+
+## 🧩 分组 2：嵌套空间操作（Underlying Space）
+
+> 处理嵌套空间（如映射域内嵌集合）时，提取其底层空间结构。
+
+```c
+__isl_give isl_space *isl_space_underlying(__isl_take isl_space *space, unsigned n_div);
+```
+- **作用**：从一个“被包裹”的空间（如 `set` 在 `map` 的域中）提取其内部实际空间，并预留 `n_div` 个存在性变量（divs）。
+- **说明**：常用于构造如 `{[i] -> [{[j]: ...}]}` 这样的嵌套结构，将内层空间从外层包装中“解开”。
+- **注意**：返回的是一个新的空间，原空间被 consume。
+
+---
+
+## 🧩 分组 3：哈希计算（Hashing）
+
+> 计算 `isl_space` 不同部分的哈希值，用于快速比较或作为键值。
+
+```c
+uint32_t isl_space_get_tuple_hash(__isl_keep isl_space *space);
+```
+- 返回空间的元组部分（domain 或 range）的哈希值（不包括参数）。
+
+```c
+uint32_t isl_space_get_tuple_domain_hash(__isl_keep isl_space *space);
+```
+- 返回空间中 domain 元组的哈希值。
+
+```c
+uint32_t isl_space_get_full_hash(__isl_keep isl_space *space);
+```
+- 返回整个空间（含参数、域、值等）的完整哈希值，可用于全等比较。
+
+> ✅ **用途**：用于缓存、集合去重、快速判等。
+
+---
+
+## 🧩 分组 4：空间结构一致性检查（Tuple Structure Comparison）
+
+> 检查两个空间在域/值上的维度结构是否匹配。
+
+```c
+isl_bool isl_space_has_domain_tuples(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 判断 `space1` 和 `space2` 的 domain tuple 是否具有相同类型和维度数。
+
+```c
+isl_bool isl_space_has_range_tuples(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 判断 `space1` 和 `space2` 的 range tuple 是否结构一致。
+
+```c
+isl_stat isl_space_check_domain_tuples(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 若 domain tuple 不匹配则返回 `isl_stat_error`，否则 `isl_stat_ok`。用于断言。
+
+```c
+isl_bool isl_space_is_domain_internal(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 判断 `space1` 是否是 `space2` 的 domain 内部空间（用于嵌套结构）。
+
+```c
+isl_bool isl_space_is_range_internal(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 类似上者，但针对 range。
+
+```c
+isl_stat isl_space_check_domain_wrapped_domain_tuples(
+    __isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 检查 `space1` 的 domain 是否是一个包裹了 `space2` domain 的嵌套结构（如 `{[x] -> S}` 包裹 `S`）。
+
+```c
+isl_bool isl_space_wrapped_tuple_is_equal(__isl_keep isl_space *space1,
+    enum isl_dim_type outer, enum isl_dim_type inner,
+    __isl_keep isl_space *space2, enum isl_dim_type type2);
+```
+- 判断 `space1` 中由 `outer` 包裹 `inner` 的嵌套结构是否与 `space2` 的 `type2` 维度结构相等。
+
+```c
+isl_stat isl_space_check_wrapped_tuple_is_equal(...);
+```
+- 同上，但返回 `isl_stat` 类型，用于错误传播。
+
+> ✅ **用途**：在构建复合表达式（如 bind、lift）前验证结构兼容性。
+
+---
+
+## 🧩 分组 5：维度查询与偏移计算
+
+> 获取空间中特定维度的大小或内存偏移位置。
+
+```c
+isl_size isl_space_wrapped_dim(__isl_keep isl_space *space,
+    enum isl_dim_type outer, enum isl_dim_type inner);
+```
+- 返回 `space` 中由 `outer` 包裹的 `inner` 类型维度的数量（例如包裹在 `set` 中的 `param` 数量）。
+
+```c
+unsigned isl_space_offset(__isl_keep isl_space *space, enum isl_dim_type type);
+```
+- 返回 `type` 类型维度在空间中的起始偏移索引（从 0 开始计数）。用于底层索引计算。
+
+> ✅ **用途**：构建约束、访问特定维度时定位。
+
+---
+
+## 🧩 分组 6：空间属性检查与断言
+
+> 验证空间是否满足某些结构性条件。
+
+```c
+isl_stat isl_space_check_range(__isl_keep isl_space *space,
+    enum isl_dim_type type, unsigned first, unsigned n);
+```
+- 检查在 `type` 类型维度中，从 `first` 开始的 `n` 个维度是否合法存在。
+
+```c
+isl_stat isl_space_check_is_set(__isl_keep isl_space *space);
+```
+- 断言该空间是一个“集合”（set），即没有 range tuple（仅 domain）。
+
+```c
+isl_bool isl_space_may_be_set(__isl_keep isl_space *space);
+```
+- 判断该空间**可能**是一个集合（即使当前是 map，也可能退化为 set）。
+
+```c
+isl_bool isl_space_is_named_or_nested(__isl_keep isl_space *space, enum isl_dim_type type);
+```
+- 判断 `type` 维度是否有名字或嵌套结构（即不是匿名平面维度）。
+
+```c
+isl_bool isl_space_has_equal_ids(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 判断两个空间的所有 ID（参数、变量名等）是否完全一致。
+
+```c
+isl_bool isl_space_has_named_params(__isl_keep isl_space *space);
+```
+- 判断是否存在命名的参数（非匿名）。
+
+```c
+isl_stat isl_space_check_named_params(__isl_keep isl_space *space);
+```
+- 断言存在命名参数，否则报错。
+
+```c
+isl_stat isl_space_check_equal_params(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 检查两个空间的参数是否完全相同（数量、顺序、ID）。
+
+```c
+isl_stat isl_space_check_equal_tuples(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 检查两个空间的 tuple 结构是否一致（domain 和 range 的维度数、嵌套结构等）。
+
+> ✅ **用途**：在执行操作前进行前置条件检查，防止非法构造。
+
+---
+
+## 🧩 分组 7：空间结构变换
+
+> 修改空间结构，如重置 ID、展平嵌套、提升维度等。
+
+```c
+__isl_give isl_space *isl_space_reset(__isl_take isl_space *space, enum isl_dim_type type);
+```
+- 清除 `type` 类型维度上的所有 ID 和命名信息，变成匿名空间。
+
+```c
+__isl_give isl_space *isl_space_flatten(__isl_take isl_space *space);
+```
+- 将嵌套的空间结构展平为单一层次（例如将 `{[i] -> {[j,k]}}` 变成 `[i,j,k]` 平面空间）。
+
+```c
+__isl_give isl_space *isl_space_lift(__isl_take isl_space *space, unsigned n_local);
+```
+- 提升空间：为局部变量预留 `n_local` 个位置，通常用于存在性量化前准备空间结构。
+
+> ✅ **用途**：为后续构造约束、进行投影或绑定做准备。
+
+---
+
+## 🧩 分组 8：域/值包装结构检查
+
+> 特别针对“包裹式”空间结构（wrapping space）进行检查。
+
+```c
+isl_stat isl_space_check_domain_is_wrapping(__isl_keep isl_space *space);
+```
+- 断言 domain 是一个包裹结构（即 domain 是另一个空间，如用于 `map`）。
+
+```c
+isl_stat isl_space_check_range_is_wrapping(__isl_keep isl_space *space);
+```
+- 断言 range 是一个包裹结构。
+
+> ✅ **用途**：确保在执行 `bind`、`unbind` 等操作时结构正确。
+
+---
+
+## 🧩 分组 9：ID 传递与替换
+
+> 在不同空间之间传递命名信息（ID）。
+
+```c
+__isl_give isl_space *isl_space_replace_params(__isl_take isl_space *dst, __isl_keep isl_space *src);
+```
+- 将 `dst` 空间中的参数替换为 `src` 空间的参数（复制 ID 信息）。
+
+```c
+__isl_give isl_space *isl_space_copy_ids_if_unset(__isl_take isl_space *dst,
+    enum isl_dim_type dst_type, __isl_keep isl_space *src, enum isl_dim_type src_type);
+```
+- 如果 `dst` 的 `dst_type` 维度没有 ID，则从 `src` 的 `src_type` 维度复制 ID。
+
+> ✅ **用途**：保持命名一致性，特别是在组合多个空间时。
+
+---
+
+## 🧩 分组 10：空间组合与绑定操作（Binding）
+
+> 构造高阶结构，如将参数绑定为维度、构造映射等。
+
+```c
+__isl_give isl_space *isl_space_extend_domain_with_range(
+    __isl_take isl_space *domain, __isl_take isl_space *model);
+```
+- 将 `model` 的维度结构附加到 `domain` 的 domain 上，用于扩展空间。
+
+```c
+__isl_give isl_space *isl_space_bind_set(__isl_take isl_space *space, __isl_keep isl_multi_id *tuple);
+```
+- 将 `space` 绑定为一个集合的参数绑定形式（如将 `[i]` 绑定为 `{[i]}`）。
+
+```c
+__isl_give isl_space *isl_space_bind_map_domain(__isl_take isl_space *space, __isl_keep isl_multi_id *tuple);
+```
+- 将 `space` 的 domain 与 `tuple` 绑定，形成 map 的 domain 结构。
+
+```c
+__isl_give isl_space *isl_space_domain_wrapped_domain(
+    __isl_take isl_space *space, __isl_keep isl_multi_id *tuple);
+```
+- 将 `space` 的 domain 包裹在一个 domain 内（构造嵌套 domain）。
+
+```c
+__isl_give isl_space *isl_space_unbind_params_insert_domain(
+    __isl_take isl_space *space, __isl_keep isl_multi_id *tuple);
+```
+- 将参数从 `space` 中“解绑”，并插入到 domain 中作为维度（常用于 lambda 到映射的转换）。
+
+> ✅ **用途**：实现函数式绑定、参数化表达式到映射的转换。
+
+---
+
+## 🧩 分组 11：空间比较
+
+```c
+int isl_space_cmp(__isl_keep isl_space *space1, __isl_keep isl_space *space2);
+```
+- 比较两个空间是否完全相等（结构、ID、嵌套等），返回值类似 `strcmp`：
+  - `< 0`: space1 < space2
+  - `= 0`: 相等
+  - `> 0`: space1 > space2
+- **用途**：排序、去重、缓存键。
+
+---
+
+## ✅ 总结：功能分组一览表
+
+| 分组 | 功能 | 主要函数 |
+|------|------|----------|
+| 1 | 写时拷贝 | `isl_space_cow` |
+| 2 | 嵌套空间处理 | `isl_space_underlying` |
+| 3 | 哈希计算 | `get_tuple_hash`, `get_full_hash` 等 |
+| 4 | 结构一致性检查 | `has_domain_tuples`, `check_wrapped_tuple_is_equal` 等 |
+| 5 | 维度查询 | `wrapped_dim`, `offset` |
+| 6 | 属性检查与断言 | `check_is_set`, `has_named_params`, `check_equal_params` 等 |
+| 7 | 结构变换 | `reset`, `flatten`, `lift` |
+| 8 | 包装结构检查 | `check_domain_is_wrapping` |
+| 9 | ID 传递 | `replace_params`, `copy_ids_if_unset` |
+| 10 | 绑定与组合 | `bind_set`, `unbind_params_insert_domain`, `extend_domain_with_range` |
+| 11 | 比较 | `isl_space_cmp` |
+
+---
+
+如你需要进一步了解某个函数的实际使用示例（比如如何用 `bind` 构造映射），或想了解 `isl_multi_id` 的作用，也可以继续提问。
