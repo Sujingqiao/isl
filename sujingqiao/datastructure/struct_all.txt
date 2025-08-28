@@ -1,0 +1,2608 @@
+$$$$$$$$$$$$$$$$$$$$$$$$$$$arg.h:20 [isl_arg_choice]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_arg_choice {
+	const char	*name;
+	unsigned	 value;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$arg.h:25 [isl_arg_flags]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_arg_flags {
+	const char	*name;
+	unsigned	 mask;
+	unsigned	 value;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$arg.h:51 [isl_arg]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_arg {
+	enum isl_arg_type	 type;
+	char			 short_name;
+	const char		*long_name;
+	const char		*argument_name;
+#define ISL_ARG_OFFSET_NONE	((size_t) -1)
+	size_t			 offset;
+	const char		*help_msg;
+#define ISL_ARG_SINGLE_DASH	(1 << 0)
+#define ISL_ARG_BOOL_ARG	(1 << 1)
+#define ISL_ARG_HIDDEN		(1 << 2)
+	unsigned		 flags;
+	union {
+	struct {
+		struct isl_arg_choice	*choice;
+		unsigned	 	 default_value;
+		unsigned	 	 default_selected;
+		int (*set)(void *opt, unsigned val);
+	} choice;
+	struct {
+		struct isl_arg_flags	*flags;
+		unsigned	 	 default_value;
+	} flags;
+	struct {
+		unsigned		 default_value;
+		int (*set)(void *opt, unsigned val);
+	} b;
+	struct {
+		int			default_value;
+	} i;
+	struct {
+		long		 	default_value;
+		long		 	default_selected;
+		int (*set)(void *opt, long val);
+	} l;
+	struct {
+		unsigned long		default_value;
+	} ul;
+	struct {
+		const char		*default_value;
+	} str;
+	struct {
+		size_t			 offset_n;
+	} str_list;
+	struct {
+		struct isl_args		*child;
+	} child;
+	struct {
+		void (*print_version)(void);
+	} version;
+	struct {
+		int (*init)(void*);
+		void (*clear)(void*);
+	} user;
+	} u;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$arg.h:108 [isl_args]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_args {
+	size_t			 options_size;
+	struct isl_arg		*args;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$basis_reduction_tab.c:17 [tab_lp]$$$$$$$$$$$$$$$$$$$$$$$$
+struct tab_lp {
+	struct isl_ctx  *ctx;
+	struct isl_vec  *row;
+	struct isl_tab  *tab;
+	struct isl_tab_undo	**stack;
+	isl_int		*obj;
+	isl_int		 opt;
+	isl_int		 opt_denom;
+	isl_int		 tmp;
+	isl_int		 tmp2;
+	int	         neq;
+	unsigned	 dim;
+	/* number of constraints in initial product tableau */
+	int		 con_offset;
+	/* objective function has fixed or no integer value */
+	int		 is_fixed;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$bound.c:9 [bound_options]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct bound_options {
+	struct isl_options	*isl;
+	unsigned		 verify;
+	int			 print_all;
+	int			 continue_on_error;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$bound.c:51 [verify_point_bound]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct verify_point_bound {
+	struct bound_options *options;
+	int stride;
+	int n;
+	int exact;
+	int error;
+
+	isl_pw_qpolynomial_fold *pwf;
+	isl_pw_qpolynomial_fold *bound;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$cat.c:23 [cat_options]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct cat_options {
+	struct isl_options	*isl;
+	unsigned		 format;
+	unsigned		 yaml_style;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$codegen.c:33 [options]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct options {
+	struct isl_options	*isl;
+	unsigned		 atomic;
+	unsigned		 separate;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$cpp.h:19 [Method]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct Method {
+	enum Kind {
+		static_method,
+		member_method,
+		constructor,
+	};
+
+	Method(const isl_class &clazz, FunctionDecl *fd,
+		const std::string &name);
+	Method(const isl_class &clazz, FunctionDecl *fd);
+
+	int c_num_params() const;
+	virtual int num_params() const;
+	virtual bool param_needs_copy(int pos) const;
+	virtual clang::ParmVarDecl *get_param(int pos) const;
+	virtual void print_param_use(ostream &os, int pos) const;
+	bool is_subclass_mutator() const;
+	static void print_arg_list(std::ostream &os, int start, int end,
+		const std::function<void(int i)> &print_arg);
+	void print_cpp_arg_list(std::ostream &os,
+		const std::function<void(int i)> &print_arg) const;
+
+	const isl_class &clazz;
+	FunctionDecl *const fd;
+	const std::string name;
+	const enum Kind kind;
+	ParmVarDecl *const callback;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$cpp.h:102 [cpp_type_printer]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct cpp_type_printer {
+	cpp_type_printer() {}
+
+	virtual std::string isl_bool() const;
+	virtual std::string isl_stat() const;
+	virtual std::string isl_size() const;
+	virtual std::string isl_namespace() const;
+	virtual std::string class_type(const std::string &cpp_name) const;
+	virtual std::string qualified(int arg, const std::string &cpp_type)
+		const;
+	std::string isl_type(int arg, QualType type) const;
+	std::string generate_callback_args(int arg, QualType type, bool cpp)
+		const;
+	std::string generate_callback_type(int arg, QualType type) const;
+	std::string param(int arg, QualType type) const;
+	std::string return_type(const Method &method) const;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ctx.h:71 [isl_stats]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_stats {
+	long	gbr_solved_lps;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$flow_cmp.c:16 [options]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct options {
+	struct isl_options *isl;
+	char *flow1;
+	char *flow2;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$generator.h:26 [set_enum]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct set_enum {
+	int	value;
+	string	name;
+	string	method_name;
+	set_enum(int value, string name, string method_name) :
+		value(value), name(name), method_name(method_name) {}
+};
+
+$$$$$$$$$$$$$$$$$$$$$$generator.h:37 [function_name_less]$$$$$$$$$$$$$$$$$$$$$$$
+struct function_name_less {
+	bool operator()(FunctionDecl *x, FunctionDecl *y) const {
+		return x->getName() < y->getName();
+	}
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$generator.h:80 [isl_class]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_class {
+	string name;
+	string superclass_name;
+	string subclass_name;
+	RecordDecl *type;
+	function_set constructors;
+	set<FunctionDecl *> persistent_callbacks;
+	map<FunctionDecl *, vector<set_enum> > set_enums;
+	map<string, function_set> methods;
+	map<int, string> type_subclasses;
+	FunctionDecl *fn_type;
+	FunctionDecl *fn_to_str;
+	FunctionDecl *fn_copy;
+	FunctionDecl *fn_free;
+
+	std::map<clang::FunctionDecl *, const isl_class &> copied_from;
+	std::map<clang::FunctionDecl *, int> copy_depth;
+	std::map<std::string, clang::ParmVarDecl *> construction_types;
+
+	/* Is the first argument an instance of the class? */
+	bool first_arg_matches_class(FunctionDecl *method) const;
+	/* Does "method" correspond to a static method? */
+	bool is_static(FunctionDecl *method) const;
+	/* Is this class a subclass based on a type function? */
+	bool is_type_subclass() const { return name != subclass_name; }
+	/* Return name of "fd" without type suffixes, if any. */
+	static string name_without_type_suffixes(FunctionDecl *fd);
+	/* Extract the method name corresponding to "fd"
+	 * (including "get" method prefix if any).
+	 */
+	string base_method_name(FunctionDecl *fd) const {
+		string m_name = name_without_type_suffixes(fd);
+		return m_name.substr(subclass_name.length() + 1);
+	}
+	/* The prefix of a "get" method. */
+	static const char *get_prefix;
+	/* Is function "fd" with the given name a "get" method? */
+	bool is_get_method_name(FunctionDecl *fd, const string &name) const;
+	/* Is function "fd" a "get" method? */
+	bool is_get_method(FunctionDecl *fd) const {
+		return is_get_method_name(fd, base_method_name(fd));
+	}
+	/* Extract the method name corresponding to "fd". */
+	string method_name(FunctionDecl *fd) const;
+	/* The prefix of any method that may set a (persistent) callback. */
+	static const char *set_callback_prefix;
+	/* Given a function that sets a persistent callback,
+	 * return the name of the callback.
+	 */
+	string persistent_callback_name(FunctionDecl *fd) const {
+		return method_name(fd).substr(strlen(set_callback_prefix));
+	}
+	/* Does this class have any functions that set a persistent callback?
+	 */
+	bool has_persistent_callbacks() const {
+		return persistent_callbacks.size() != 0;
+	}
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$hash.h:50 [isl_hash_table]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_hash_table {
+	int    bits;
+	int    n;
+	struct isl_hash_table_entry *entries;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$hmap_templ.c:24 [ISL_HMAP]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct ISL_HMAP {
+	int ref;
+	isl_ctx *ctx;
+	struct isl_hash_table table;
+};
+
+$$$$$$$$$$$$$$$$isl_aff.c:6266 [isl_union_pw_multi_aff_bin_data]$$$$$$$$$$$$$$$$
+struct isl_union_pw_multi_aff_bin_data {
+	isl_union_pw_multi_aff *upma2;
+	isl_union_pw_multi_aff *res;
+	isl_pw_multi_aff *pma;
+	isl_stat (*fn)(__isl_take isl_pw_multi_aff *pma, void *user);
+};
+
+$$$$$$$$isl_aff.c:7853 [isl_union_pw_multi_aff_multi_val_on_domain_data]$$$$$$$$
+struct isl_union_pw_multi_aff_multi_val_on_domain_data {
+	isl_multi_val *mv;
+	isl_union_pw_multi_aff *res;
+};
+
+$$$$$$$$$$$$$$isl_aff.c:8102 [isl_union_pw_aff_reset_params_data]$$$$$$$$$$$$$$$
+struct isl_union_pw_aff_reset_params_data {
+	isl_space *space;
+	isl_union_pw_aff *res;
+};
+
+$$$$$$$$$isl_aff.c:8206 [isl_union_pw_multi_aff_get_union_pw_aff_data]$$$$$$$$$$
+struct isl_union_pw_multi_aff_get_union_pw_aff_data {
+	int pos;
+	isl_union_pw_aff *res;
+};
+
+$$$$$$$$$$$$isl_aff.c:8297 [isl_union_pw_aff_pw_aff_on_domain_data]$$$$$$$$$$$$$
+struct isl_union_pw_aff_pw_aff_on_domain_data {
+	isl_pw_aff *pa;
+	isl_union_pw_aff *res;
+};
+
+$$$$$$$$$$$$$$isl_aff.c:8396 [isl_union_pw_aff_val_on_domain_data]$$$$$$$$$$$$$$
+struct isl_union_pw_aff_val_on_domain_data {
+	isl_val *v;
+	isl_union_pw_aff *res;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_aff.c:8509 [isl_bind_id_data]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_bind_id_data {
+	isl_id *id;
+	isl_union_set *bound;
+};
+
+$$$$$$$$$$$$$$isl_aff.c:8552 [isl_union_pw_aff_pullback_upma_data]$$$$$$$$$$$$$$
+struct isl_union_pw_aff_pullback_upma_data {
+	isl_union_pw_multi_aff *upma;
+	isl_pw_aff *pa;
+	isl_union_pw_aff *res;
+};
+
+$$$$$$$$$isl_aff.c:9180 [isl_union_pw_multi_aff_reset_range_space_data]$$$$$$$$$
+struct isl_union_pw_multi_aff_reset_range_space_data {
+	isl_space *range;
+	isl_union_pw_multi_aff *res;
+};
+
+$$$$$$$$$$$$$isl_aff.c:9884 [isl_union_pw_multi_aff_un_op_control]$$$$$$$$$$$$$$
+struct isl_union_pw_multi_aff_un_op_control {
+	isl_bool (*filter)(__isl_keep isl_pw_multi_aff *part);
+	__isl_give isl_pw_multi_aff *(*fn)(__isl_take isl_pw_multi_aff *pma);
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_aff_private.h:16 [isl_aff]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_aff {
+	int ref;
+
+	isl_local_space	*ls;
+	isl_vec		*v;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_aff_private.h:28 [isl_pw_aff_piece]$$$$$$$$$$$$$$$$$$$$$
+struct isl_pw_aff_piece {
+	struct isl_set *set;
+	struct isl_aff *aff;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_aff_private.h:33 [isl_pw_aff]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_pw_aff {
+	int ref;
+
+	isl_space *dim;
+
+	int n;
+
+	size_t size;
+	struct isl_pw_aff_piece p[1];
+};
+
+$$$$$$$$$$$$$$$$$isl_aff_private.h:54 [isl_pw_multi_aff_piece]$$$$$$$$$$$$$$$$$$
+struct isl_pw_multi_aff_piece {
+	isl_set *set;
+	isl_multi_aff *maff;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_aff_private.h:59 [isl_pw_multi_aff]$$$$$$$$$$$$$$$$$$$$$
+struct isl_pw_multi_aff {
+	int ref;
+
+	isl_space *dim;
+
+	int n;
+
+	size_t size;
+	struct isl_pw_multi_aff_piece p[1];
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$isl_arg.c:215 [isl_prefixes]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_prefixes {
+	int n;
+	const char *prefix[10];
+	size_t len[10];
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_ast.c:1672 [isl_ast_expr_op_names]$$$$$$$$$$$$$$$$$$$$$
+struct isl_ast_expr_op_names {
+	char *op_str[isl_ast_expr_op_last + 1];
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_ast.c:2703 [isl_ast_expr_op_printed]$$$$$$$$$$$$$$$$$$$$
+struct isl_ast_expr_op_printed {
+	char printed[isl_ast_expr_op_last + 1];
+};
+
+$$$$$$$$$$$$$$$$isl_ast_build_expr.c:49 [isl_ast_add_term_data]$$$$$$$$$$$$$$$$$
+struct isl_ast_add_term_data {
+	isl_ast_build *build;
+	isl_val *cst;
+	isl_val *v;
+};
+
+$$$$$$$$$$$$$$$$isl_ast_build_expr.c:495 [isl_extract_mod_data]$$$$$$$$$$$$$$$$$
+struct isl_extract_mod_data {
+	isl_ast_build *build;
+	isl_aff *aff;
+
+	isl_ast_expr *pos;
+	isl_ast_expr *neg;
+
+	isl_aff *add;
+
+	int i;
+	isl_val *v;
+	isl_val *d;
+	isl_aff *div;
+
+	isl_aff *nonneg;
+	int sign;
+};
+
+$$$$$$$$$$$$$$$isl_ast_build_expr.c:1704 [isl_from_pw_aff_piece]$$$$$$$$$$$$$$$$
+struct isl_from_pw_aff_piece {
+	enum isl_from_pw_aff_state state;
+	isl_set *set;
+	isl_set_list *set_list;
+	isl_aff_list *aff_list;
+};
+
+$$$$$$$$$$$$$$$$isl_ast_build_expr.c:1723 [isl_from_pw_aff_data]$$$$$$$$$$$$$$$$
+struct isl_from_pw_aff_data {
+	isl_ast_build *build;
+	isl_set *dom;
+
+	int n;
+	int max;
+	struct isl_from_pw_aff_piece *p;
+};
+
+$$$$$$$$$$$$$$$$$$isl_ast_build_private.h:145 [isl_ast_build]$$$$$$$$$$$$$$$$$$$
+struct isl_ast_build {
+	int ref;
+
+	int outer_pos;
+	int depth;
+
+	isl_id_list *iterators;
+
+	isl_set *domain;
+	isl_set *generated;
+	isl_set *pending;
+	isl_multi_aff *values;
+
+	isl_pw_aff *value;
+
+	isl_vec *strides;
+	isl_multi_aff *offsets;
+
+	isl_multi_aff *schedule_map;
+	isl_multi_aff *internal2input;
+
+	isl_union_map *options;
+
+	__isl_give isl_ast_node *(*at_each_domain)(
+		__isl_take isl_ast_node *node,
+		__isl_keep isl_ast_build *build, void *user);
+	void *at_each_domain_user;
+
+	__isl_give isl_id *(*before_each_for)(
+		__isl_keep isl_ast_build *context, void *user);
+	void *before_each_for_user;
+	__isl_give isl_ast_node *(*after_each_for)(
+		__isl_take isl_ast_node *node,
+		__isl_keep isl_ast_build *context, void *user);
+	void *after_each_for_user;
+
+	isl_stat (*before_each_mark)(__isl_keep isl_id *mark,
+		__isl_keep isl_ast_build *build, void *user);
+	void *before_each_mark_user;
+	__isl_give isl_ast_node *(*after_each_mark)(
+		__isl_take isl_ast_node *node,
+		__isl_keep isl_ast_build *context, void *user);
+	void *after_each_mark_user;
+
+	__isl_give isl_ast_node *(*create_leaf)(
+		__isl_take isl_ast_build *build, void *user);
+	void *create_leaf_user;
+
+	isl_union_map *executed;
+	int single_valued;
+
+	isl_schedule_node *node;
+	int n;
+	enum isl_ast_loop_type *loop_type;
+	isl_set *isolated;
+};
+
+$$$$$$$$$$$$$$$$isl_ast_codegen.c:56 [isl_generate_domain_data]$$$$$$$$$$$$$$$$$
+struct isl_generate_domain_data {
+	isl_ast_build *build;
+
+	isl_ast_graft_list *list;
+};
+
+$$$$$$$$$$$$isl_ast_codegen.c:1238 [isl_ast_count_constraints_data]$$$$$$$$$$$$$
+struct isl_ast_count_constraints_data {
+	int pos;
+
+	int n_indep;
+	int n_lower;
+	int n_upper;
+};
+
+$$$$$$$$$$$$$$$$$isl_ast_codegen.c:1572 [isl_check_scaled_data]$$$$$$$$$$$$$$$$$
+struct isl_check_scaled_data {
+	int depth;
+	isl_val *m;
+};
+
+$$$$$$$$$$$$$$$$$$isl_ast_codegen.c:1948 [isl_add_nodes_data]$$$$$$$$$$$$$$$$$$$
+struct isl_add_nodes_data {
+	isl_union_map *executed;
+	isl_ast_build *build;
+
+	isl_ast_graft_list *list;
+};
+
+$$$$$$$$isl_ast_codegen.c:2125 [isl_ast_generate_parallel_domains_data]$$$$$$$$$
+struct isl_ast_generate_parallel_domains_data {
+	isl_size n;
+	isl_union_map *executed;
+	isl_ast_build *build;
+
+	int single;
+	isl_ast_graft_list *list;
+};
+
+$$$$$$$$$$$$$$$isl_ast_codegen.c:2221 [isl_separate_domain_data]$$$$$$$$$$$$$$$$
+struct isl_separate_domain_data {
+	isl_ast_build *build;
+	int explicit;
+	isl_set *domain;
+};
+
+$$$$$$$$$$$$$$$$$isl_ast_codegen.c:2345 [isl_find_unroll_data]$$$$$$$$$$$$$$$$$$
+struct isl_find_unroll_data {
+	isl_ast_build *build;
+	isl_set *domain;
+	int depth;
+	isl_basic_map *expansion;
+
+	isl_aff *lower;
+	int *n;
+	int n_div;
+};
+
+$$$$$$$$$$$$$$$$$$isl_ast_codegen.c:2708 [isl_codegen_domains]$$$$$$$$$$$$$$$$$$
+struct isl_codegen_domains {
+	isl_basic_set_list *list;
+
+	isl_union_map *executed;
+	isl_ast_build *build;
+	isl_set *schedule_domain;
+
+	isl_set *option[4];
+
+	isl_map *sep_class;
+	isl_set *done;
+};
+
+$$$$$$$$$$$$$$$$$$isl_ast_codegen.c:2727 [isl_ast_unroll_data]$$$$$$$$$$$$$$$$$$
+struct isl_ast_unroll_data {
+	struct isl_codegen_domains *domains;
+	isl_set *class_domain;
+	isl_set *unroll_domain;
+};
+
+$$$$$$$$$$$$$$$isl_ast_codegen.c:3221 [isl_ast_unroll_tree_data]$$$$$$$$$$$$$$$$
+struct isl_ast_unroll_tree_data {
+	isl_union_map *executed;
+	isl_ast_build *build;
+	isl_ast_graft_list *list;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_ast_codegen.c:3693 [isl_set_map_pair]$$$$$$$$$$$$$$$$$$$$
+struct isl_set_map_pair {
+	isl_set *set;
+	isl_map *map;
+};
+
+$$$$$$$$$$$$$isl_ast_codegen.c:4673 [isl_any_scheduled_after_data]$$$$$$$$$$$$$$
+struct isl_any_scheduled_after_data {
+	isl_ast_build *build;
+	int depth;
+	int group_coscheduled;
+	struct isl_set_map_pair *domain;
+};
+
+$$$$$$$$$$$$$$$$isl_ast_codegen.c:4874 [isl_generate_code_data]$$$$$$$$$$$$$$$$$
+struct isl_generate_code_data {
+	int internal;
+	isl_union_map *executed;
+	isl_ast_build *build;
+
+	isl_ast_graft_list *list;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_ast_graft.c:274 [isl_insert_if_data]$$$$$$$$$$$$$$$$$$$$
+struct isl_insert_if_data {
+	isl_ast_node_list *list;
+	isl_ast_node *node;
+	isl_ast_build *build;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_ast_graft.c:533 [isl_if_node]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_if_node {
+	isl_ast_node *node;
+	isl_set *guard;
+	isl_set *complement;
+};
+
+$$$$$$$$$$$$$$$$$isl_ast_graft.c:1327 [isl_split_on_guard_data]$$$$$$$$$$$$$$$$$
+struct isl_split_on_guard_data {
+	isl_set_to_ast_graft_list *guard2list;
+	int *any_match;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_ast_graft_private.h:28 [isl_ast_graft]$$$$$$$$$$$$$$$$$$$
+struct isl_ast_graft {
+	int ref;
+
+	isl_ast_node *node;
+
+	isl_set *guard;
+	isl_basic_set *enforced;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_ast_private.h:14 [isl_ast_expr]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_ast_expr {
+	int ref;
+
+	isl_ctx *ctx;
+
+	enum isl_ast_expr_type type;
+
+	union {
+		isl_val *v;
+		isl_id *id;
+		struct {
+			enum isl_ast_expr_op_type op;
+			unsigned n_arg;
+			isl_ast_expr **args;
+		} op;
+	} u;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_ast_private.h:54 [isl_ast_node]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_ast_node {
+	int ref;
+
+	isl_ctx *ctx;
+	enum isl_ast_node_type type;
+
+	union {
+		struct {
+			isl_ast_node_list *children;
+		} b;
+		struct {
+			isl_ast_expr *guard;
+			isl_ast_node *then;
+			isl_ast_node *else_node;
+		} i;
+		struct {
+			unsigned degenerate : 1;
+			isl_ast_expr *iterator;
+			isl_ast_expr *init;
+			isl_ast_expr *cond;
+			isl_ast_expr *inc;
+			isl_ast_node *body;
+		} f;
+		struct {
+			isl_ast_expr *expr;
+		} e;
+		struct {
+			isl_id *mark;
+			isl_ast_node *node;
+		} m;
+	} u;
+
+	isl_id *annotation;
+};
+
+$$$$$$$$$$$$$$$$$isl_ast_private.h:104 [isl_ast_print_options]$$$$$$$$$$$$$$$$$$
+struct isl_ast_print_options {
+	int ref;
+	isl_ctx *ctx;
+
+	__isl_give isl_printer *(*print_for)(__isl_take isl_printer *p,
+		__isl_take isl_ast_print_options *options,
+		__isl_keep isl_ast_node *node, void *user);
+	void *print_for_user;
+	__isl_give isl_printer *(*print_user)(__isl_take isl_printer *p,
+		__isl_take isl_ast_print_options *options,
+		__isl_keep isl_ast_node *node, void *user);
+	void *print_user_user;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_bernstein.c:28 [bernstein_data]$$$$$$$$$$$$$$$$$$$$$$$
+struct bernstein_data {
+	enum isl_fold type;
+	isl_qpolynomial *poly;
+	int check_tight;
+
+	isl_cell *cell;
+
+	isl_qpolynomial_fold *fold;
+	isl_qpolynomial_fold *fold_tight;
+	isl_pw_qpolynomial_fold *pwf;
+	isl_pw_qpolynomial_fold *pwf_tight;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_blk.h:19 [isl_blk]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_blk {
+	size_t size;
+	isl_int *data;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_bound.c:380 [isl_union_bound_data]$$$$$$$$$$$$$$$$$$$$$
+struct isl_union_bound_data {
+	enum isl_fold type;
+	isl_bool tight;
+	isl_union_pw_qpolynomial_fold *res;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_bound.h:6 [isl_bound]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_bound {
+	/* input */
+	int check_tight;
+	int wrapping;
+	enum isl_fold type;
+	isl_space *dim;
+	isl_basic_set *bset;
+	isl_qpolynomial_fold *fold;
+
+	/* output */
+	isl_pw_qpolynomial_fold *pwf;
+	isl_pw_qpolynomial_fold *pwf_tight;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$isl_box.c:28 [isl_fixed_box]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_fixed_box {
+	isl_multi_aff *offset;
+	isl_multi_val *size;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_box.c:238 [isl_size_info]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_size_info {
+	isl_basic_set *bset;
+	isl_size pos;
+	isl_val *size;
+	isl_aff *offset;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_coalesce.c:197 [isl_coalesce_info]$$$$$$$$$$$$$$$$$$$$$
+struct isl_coalesce_info {
+	isl_basic_map *bmap;
+	struct isl_tab *tab;
+	uint32_t hull_hash;
+	int modified;
+	int removed;
+	int simplify;
+	int *eq;
+	int *ineq;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_coalesce.c:1171 [isl_wraps]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_wraps {
+	int failed;
+	int bound;
+	isl_mat *mat;
+	isl_int max;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_coalesce.c:3016 [isl_expanded]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_expanded {
+	int pos;
+	isl_bool cst;
+	isl_int val;
+};
+
+$$$$$$$$$$$$$$$$$$isl_constraint_private.h:8 [isl_constraint]$$$$$$$$$$$$$$$$$$$
+struct isl_constraint {
+	int ref;
+
+	int eq;
+	isl_local_space	*ls;
+	isl_vec		*v;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_convex_hull.c:1515 [max_constraint]$$$$$$$$$$$$$$$$$$$$$
+struct max_constraint {
+	struct isl_mat *c;
+	int	 	count;
+	int		ineq;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_convex_hull.c:1993 [sh_data_entry]$$$$$$$$$$$$$$$$$$$$$
+struct sh_data_entry {
+	struct isl_hash_table	*table;
+	struct isl_tab		*tab;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_convex_hull.c:2007 [sh_data]$$$$$$$$$$$$$$$$$$$$$$$$
+struct sh_data {
+	struct isl_ctx		*ctx;
+	unsigned		n;
+	struct isl_hash_table	*hull_table;
+	struct sh_data_entry	p[1];
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_convex_hull.c:2028 [ineq_cmp_data]$$$$$$$$$$$$$$$$$$$$$
+struct ineq_cmp_data {
+	unsigned	len;
+	isl_int		*p;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_ctx_private.h:11 [isl_ctx]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_ctx {
+	int			ref;
+
+	struct isl_stats	*stats;
+
+	int			 opt_allocated;
+	struct isl_options	*opt;
+	void			*user_opt;
+	struct isl_args		*user_args;
+
+	isl_int			zero;
+	isl_int			one;
+	isl_int			two;
+	isl_int			negone;
+
+	isl_int			normalize_gcd;
+
+	int			n_cached;
+	int			n_miss;
+	struct isl_blk		cache[ISL_BLK_CACHE_SIZE];
+	struct isl_hash_table	id_table;
+
+	enum isl_error		error;
+	const char		*error_msg;
+	const char		*error_file;
+	int			error_line;
+
+	int			abort;
+
+	unsigned long		operations;
+	unsigned long		max_operations;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_dim_map.c:18 [isl_dim_map_entry]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_dim_map_entry {
+	int pos;
+	int sgn;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_dim_map.c:24 [isl_dim_map]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_dim_map {
+	unsigned len;
+	struct isl_dim_map_entry m[1];
+};
+
+$$$$$$$$$$$$$$$$$$isl_factorization.c:136 [isl_factor_groups]$$$$$$$$$$$$$$$$$$$
+struct isl_factor_groups {
+	int *pos;		/* for each column: row position of pivot */
+	int *group;		/* group to which a column belongs */
+	int *cnt;		/* number of columns in the group */
+	int *rowgroup;		/* group to which a constraint belongs */
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_factorization.h:17 [isl_factorizer]$$$$$$$$$$$$$$$$$$$$$
+struct isl_factorizer {
+	isl_basic_set	*bset;
+	isl_morph	*morph;
+	int		n_group;
+	int		*len;
+};
+
+$$$$$$$$$$$$$$$$isl_farkas.c:355 [isl_coefficients_factor_data]$$$$$$$$$$$$$$$$$
+struct isl_coefficients_factor_data {
+	isl_basic_set *coeff;
+	int start;
+	int dim;
+	int n_line;
+	int n_ray;
+	int n_vertex;
+	int pos;
+};
+
+$$$$$$$$$$$$$$$$isl_farkas.c:372 [isl_coefficients_product_data]$$$$$$$$$$$$$$$$
+struct isl_coefficients_product_data {
+	int n;
+	int pos;
+	int start_next;
+	struct isl_coefficients_factor_data *factors;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_flow.c:37 [isl_restriction]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_restriction {
+	enum isl_restriction_type type;
+
+	isl_set *source;
+	isl_set *sink;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_flow.c:159 [isl_labeled_map]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_labeled_map {
+	struct isl_map	*map;
+	void		*data;
+	int		must;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_flow.c:184 [isl_access_info]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_access_info {
+	isl_map				*domain_map;
+	struct isl_labeled_map		sink;
+	isl_access_level_before		level_before;
+	isl_access_coscheduled		coscheduled;
+
+	isl_access_restrict		restrict_fn;
+	void				*restrict_user;
+
+	int		    		max_source;
+	int		    		n_must;
+	int		    		n_may;
+	struct isl_labeled_map		source[1];
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_flow.c:204 [isl_flow]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_flow {
+	isl_set			*must_no_source;
+	isl_set			*may_no_source;
+	int			n_source;
+	struct isl_labeled_map	*dep;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_flow.c:318 [access_sort_info]$$$$$$$$$$$$$$$$$$$$$$$$
+struct access_sort_info {
+	isl_access_info *access_info;
+	int error;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_flow.c:1401 [isl_sched_info]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sched_info {
+	int *is_cst;
+	isl_vec *cst;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_flow.c:1503 [isl_union_access_info]$$$$$$$$$$$$$$$$$$$$$
+struct isl_union_access_info {
+	isl_union_map *access[isl_access_end];
+
+	isl_schedule *schedule;
+	isl_union_map *schedule_map;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_flow.c:2086 [isl_union_flow]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_union_flow {
+	isl_union_map *must_dep;
+	isl_union_map *may_dep;
+	isl_union_map *must_no_source;
+	isl_union_map *may_no_source;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_flow.c:2329 [isl_compute_flow_data]$$$$$$$$$$$$$$$$$$$$$
+struct isl_compute_flow_data {
+	isl_union_map *must_source;
+	isl_union_map *may_source;
+	isl_union_flow *flow;
+
+	int count;
+	int must;
+	isl_space *dim;
+	struct isl_sched_info *sink_info;
+	struct isl_sched_info **source_info;
+	isl_access_info *accesses;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_flow.c:2720 [isl_scheduled_access]$$$$$$$$$$$$$$$$$$$$$
+struct isl_scheduled_access {
+	isl_map *access;
+	int must;
+	isl_schedule_node *node;
+};
+
+$$$$$$$$$$$$$$$$isl_flow.c:2736 [isl_compute_flow_schedule_data]$$$$$$$$$$$$$$$$
+struct isl_compute_flow_schedule_data {
+	isl_union_access_info *access;
+
+	int n_sink;
+	int n_source;
+
+	struct isl_scheduled_access *sink;
+	struct isl_scheduled_access *source;
+
+	int set_sink;
+	int must;
+	isl_schedule_node *node;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_fold.c:275 [isl_fold_dims_data]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_fold_dims_data {
+	enum isl_dim_type type;
+	unsigned first;
+	unsigned n;
+};
+
+$$$$$$$$$$$$$$$$$$isl_fold.c:321 [isl_fold_set_dim_name_data]$$$$$$$$$$$$$$$$$$$
+struct isl_fold_set_dim_name_data {
+	enum isl_dim_type type;
+	unsigned pos;
+	const char *s;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_fold.c:1707 [isl_fold_move_dims_data]$$$$$$$$$$$$$$$$$$$$
+struct isl_fold_move_dims_data {
+	enum isl_dim_type dst_type;
+	unsigned dst_pos;
+	enum isl_dim_type src_type;
+	unsigned src_pos;
+	unsigned n;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_fold.c:1764 [isl_fold_substitute]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_fold_substitute {
+	enum isl_dim_type type;
+	unsigned first;
+	unsigned n;
+	isl_qpolynomial **subs;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_fold.c:1934 [isl_apply_fold_data]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_apply_fold_data {
+	isl_union_pw_qpolynomial_fold *upwf;
+	isl_union_pw_qpolynomial_fold *res;
+	isl_map *map;
+	isl_bool tight;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_id.c:79 [isl_name_and_user]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_name_and_user {
+	const char *name;
+	void *user;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$isl_id_private.h:21 [isl_id]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_id {
+	int ref;
+	isl_ctx *ctx;
+
+	const char *name;
+	void *user;
+	uint32_t hash;
+
+	__isl_give void (*free_user)(void *user);
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_ilp.c:650 [isl_pw_aff_opt_data]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_pw_aff_opt_data {
+	int max;
+
+	isl_val *res;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_ilp.c:711 [isl_union_pw_aff_opt_data]$$$$$$$$$$$$$$$$$$$$
+struct isl_union_pw_aff_opt_data {
+	int max;
+
+	isl_val *res;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_input.c:36 [variable]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct variable {
+	char    	    	*name;
+	int	     		 pos;
+	struct variable		*next;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_input.c:42 [vars]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct vars {
+	struct isl_ctx	*ctx;
+	int		 n;
+	struct variable	*v;
+};
+
+$$$$$$$$$$$$$$$$$isl_local_space_private.h:8 [isl_local_space]$$$$$$$$$$$$$$$$$$
+struct isl_local_space {
+	int ref;
+
+	isl_space *dim;
+	isl_mat *div;
+};
+
+$$$$$$$$$$$$$$$$$isl_map.c:8372 [isl_intersect_factor_control]$$$$$$$$$$$$$$$$$$
+struct isl_intersect_factor_control {
+	enum isl_dim_type preserve_type;
+	__isl_give isl_space *(*other_factor)(__isl_take isl_space *space);
+	__isl_give isl_map *(*product)(__isl_take isl_map *factor,
+		__isl_take isl_map *other);
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_map_private.h:36 [isl_basic_map]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_basic_map {
+	int ref;
+#define ISL_BASIC_MAP_FINAL		(1 << 0)
+#define ISL_BASIC_MAP_EMPTY		(1 << 1)
+#define ISL_BASIC_MAP_NO_IMPLICIT	(1 << 2)
+#define ISL_BASIC_MAP_NO_REDUNDANT	(1 << 3)
+#define ISL_BASIC_MAP_RATIONAL		(1 << 4)
+#define ISL_BASIC_MAP_SORTED		(1 << 5)
+#define ISL_BASIC_MAP_NORMALIZED_DIVS	(1 << 6)
+#define ISL_BASIC_MAP_ALL_EQUALITIES	(1 << 7)
+#define ISL_BASIC_MAP_REDUCED_COEFFICIENTS	(1 << 8)
+#define ISL_BASIC_SET_FINAL		(1 << 0)
+#define ISL_BASIC_SET_EMPTY		(1 << 1)
+#define ISL_BASIC_SET_NO_IMPLICIT	(1 << 2)
+#define ISL_BASIC_SET_NO_REDUNDANT	(1 << 3)
+#define ISL_BASIC_SET_RATIONAL		(1 << 4)
+#define ISL_BASIC_SET_SORTED		(1 << 5)
+#define ISL_BASIC_SET_NORMALIZED_DIVS	(1 << 6)
+#define ISL_BASIC_SET_ALL_EQUALITIES	(1 << 7)
+#define ISL_BASIC_SET_REDUCED_COEFFICIENTS	(1 << 8)
+	unsigned flags;
+
+	struct isl_ctx *ctx;
+
+	isl_space *dim;
+	unsigned extra;
+
+	unsigned n_eq;
+	unsigned n_ineq;
+
+	size_t c_size;
+	isl_int **eq;
+	isl_int **ineq;
+
+	unsigned n_div;
+
+	isl_int **div;
+
+	struct isl_vec *sample;
+
+	struct isl_blk block;
+	struct isl_blk block2;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_map_private.h:96 [isl_map]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_map {
+	int ref;
+#define ISL_MAP_DISJOINT		(1 << 0)
+#define ISL_MAP_NORMALIZED		(1 << 1)
+#define ISL_SET_DISJOINT		(1 << 0)
+#define ISL_SET_NORMALIZED		(1 << 1)
+	unsigned flags;
+	isl_basic_map *cached_simple_hull[2];
+
+	struct isl_ctx *ctx;
+
+	isl_space *dim;
+
+	int n;
+
+	size_t size;
+	struct isl_basic_map *p[1];
+};
+
+$$$$$$$$$$$$$$$$$isl_map_simplify.c:694 [isl_constraint_index]$$$$$$$$$$$$$$$$$$
+struct isl_constraint_index {
+	unsigned int size;
+	int bits;
+	isl_int ***index;
+	isl_size total;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_map_simplify.c:4247 [test_ineq_data]$$$$$$$$$$$$$$$$$$$$
+struct test_ineq_data {
+	struct isl_tab *tab;
+	isl_vec *v;
+	isl_int g;
+	isl_int fl;
+	isl_int fu;
+};
+
+$$$$$$$$$$$$$$$$$$isl_map_subtract.c:274 [isl_diff_collector]$$$$$$$$$$$$$$$$$$$
+struct isl_diff_collector {
+	isl_stat (*add)(struct isl_diff_collector *dc,
+		    __isl_take isl_basic_map *bmap);
+};
+
+$$$$$$$$$$$$$$isl_map_subtract.c:478 [isl_subtract_diff_collector]$$$$$$$$$$$$$$
+struct isl_subtract_diff_collector {
+	struct isl_diff_collector dc;
+	struct isl_map *diff;
+};
+
+$$$$$$$$$$$$$$isl_map_subtract.c:648 [isl_is_empty_diff_collector]$$$$$$$$$$$$$$
+struct isl_is_empty_diff_collector {
+	struct isl_diff_collector dc;
+	isl_bool empty;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_mat_private.h:7 [isl_mat]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_mat {
+	int ref;
+
+	struct isl_ctx *ctx;
+
+#define ISL_MAT_BORROWED		(1 << 0)
+	unsigned flags;
+
+	unsigned n_row;
+	unsigned n_col;
+
+	isl_int **row;
+
+	/* actual size of the rows in memory; n_col <= max_col */
+	unsigned max_col;
+
+	struct isl_blk block;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_morph.h:28 [isl_morph]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_morph {
+	int ref;
+
+	isl_basic_set *dom;
+	isl_basic_set *ran;
+
+	isl_mat *map;
+	isl_mat *inv;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_options_private.h:6 [isl_options]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_options {
+	#define			ISL_CONTEXT_GBR		0
+	#define			ISL_CONTEXT_LEXMIN	1
+	unsigned		context;
+
+	#define			ISL_GBR_NEVER	0
+	#define			ISL_GBR_ONCE	1
+	#define			ISL_GBR_ALWAYS	2
+	unsigned		gbr;
+	unsigned		gbr_only_first;
+
+	#define			ISL_CLOSURE_ISL		0
+	#define			ISL_CLOSURE_BOX		1
+	unsigned		closure;
+
+	int			bound;
+	unsigned		on_error;
+
+	#define			ISL_BERNSTEIN_FACTORS	1
+	#define			ISL_BERNSTEIN_INTERVALS	2
+	int			bernstein_recurse;
+
+	int			bernstein_triangulate;
+
+	int			pip_symmetry;
+
+	#define			ISL_CONVEX_HULL_WRAP	0
+	#define			ISL_CONVEX_HULL_FM	1
+	int			convex;
+
+	int			coalesce_bounded_wrapping;
+	int			coalesce_preserve_locals;
+
+	int			schedule_max_coefficient;
+	int			schedule_max_constant_term;
+	int			schedule_parametric;
+	int			schedule_outer_coincidence;
+	int			schedule_maximize_band_depth;
+	int			schedule_maximize_coincidence;
+	int			schedule_split_scaled;
+	int			schedule_treat_coalescing;
+	int			schedule_separate_components;
+	int			schedule_whole_component;
+	unsigned		schedule_algorithm;
+	int			schedule_carry_self_first;
+	int			schedule_serialize_sccs;
+
+	int			tile_scale_tile_loops;
+	int			tile_shift_point_loops;
+
+	char			*ast_iterator_type;
+	int			ast_always_print_block;
+	int			ast_print_outermost_block;
+	int			ast_print_macro_once;
+
+	int			ast_build_atomic_upper_bound;
+	int			ast_build_prefer_pdiv;
+	int			ast_build_detect_min_max;
+	int			ast_build_exploit_nested_bounds;
+	int			ast_build_group_coscheduled;
+	int			ast_build_separation_bounds;
+	int			ast_build_scale_strides;
+	int			ast_build_allow_else;
+	int			ast_build_allow_or;
+
+	int			print_stats;
+	unsigned long		max_operations;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_output.c:1242 [isl_aff_split]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_aff_split {
+	isl_basic_map *aff;
+	isl_map *map;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_output.c:1615 [isl_union_print_data]$$$$$$$$$$$$$$$$$$$$
+struct isl_union_print_data {
+	isl_printer *p;
+	int first;
+};
+
+$$$$$$$$$$$$$$$$$isl_output_private.h:15 [isl_print_space_data]$$$$$$$$$$$$$$$$$
+struct isl_print_space_data {
+	int latex;
+	__isl_give isl_printer *(*print_dim)(__isl_take isl_printer *p,
+		struct isl_print_space_data *data, unsigned pos);
+	void *user;
+
+	isl_space *space;
+	enum isl_dim_type type;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_point.c:498 [isl_foreach_point]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_foreach_point {
+	struct isl_scan_callback callback;
+	isl_stat (*fn)(__isl_take isl_point *pnt, void *user);
+	void *user;
+	isl_space *dim;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_point_private.h:8 [isl_point]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_point {
+	int		ref;
+	isl_space	*dim;
+	struct isl_vec	*vec;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_polynomial.c:1482 [isl_div_sort_info]$$$$$$$$$$$$$$$$$$$$
+struct isl_div_sort_info {
+	isl_mat	*div;
+	int	 row;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_polynomial.c:4323 [isl_opt_data]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_opt_data {
+	isl_qpolynomial *qp;
+	int first;
+	isl_val *opt;
+	int max;
+};
+
+$$$$$$$$$$$$$$$$$isl_polynomial.c:4514 [isl_split_periods_data]$$$$$$$$$$$$$$$$$
+struct isl_split_periods_data {
+	int max_periods;
+	isl_pw_qpolynomial *res;
+};
+
+$$$$$$isl_polynomial.c:4771 [isl_multiplicative_call_data_pw_qpolynomial]$$$$$$$
+struct isl_multiplicative_call_data_pw_qpolynomial {
+	__isl_give isl_pw_qpolynomial *(*fn)(__isl_take isl_basic_set *bset);
+	isl_pw_qpolynomial *pwqp;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_polynomial.c:5073 [isl_to_poly_data]$$$$$$$$$$$$$$$$$$$$
+struct isl_to_poly_data {
+	int sign;
+	isl_pw_qpolynomial *res;
+	isl_qpolynomial *qp;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_polynomial_private.h:10 [isl_poly]$$$$$$$$$$$$$$$$$$$$$
+struct isl_poly {
+	int ref;
+	struct isl_ctx *ctx;
+
+	int var;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_polynomial_private.h:18 [isl_poly_cst]$$$$$$$$$$$$$$$$$$$
+struct isl_poly_cst {
+	struct isl_poly poly;
+	isl_int n;
+	isl_int d;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_polynomial_private.h:25 [isl_poly_rec]$$$$$$$$$$$$$$$$$$$
+struct isl_poly_rec {
+	struct isl_poly poly;
+	int n;
+
+	size_t size;
+	isl_poly *p[];
+};
+
+$$$$$$$$$$$$$$$$$isl_polynomial_private.h:36 [isl_qpolynomial]$$$$$$$$$$$$$$$$$$
+struct isl_qpolynomial {
+	int ref;
+
+	isl_space *dim;
+	struct isl_mat *div;
+	isl_poly *poly;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_polynomial_private.h:49 [isl_term]$$$$$$$$$$$$$$$$$$$$$
+struct isl_term {
+	int ref;
+
+	isl_int n;
+	isl_int d;
+
+	isl_space *dim;
+	struct isl_mat *div;
+
+	int pow[1];
+};
+
+$$$$$$$$$$$$$isl_polynomial_private.h:61 [isl_pw_qpolynomial_piece]$$$$$$$$$$$$$
+struct isl_pw_qpolynomial_piece {
+	struct isl_set *set;
+	struct isl_qpolynomial *qp;
+};
+
+$$$$$$$$$$$$$$$$isl_polynomial_private.h:66 [isl_pw_qpolynomial]$$$$$$$$$$$$$$$$
+struct isl_pw_qpolynomial {
+	int ref;
+
+	isl_space *dim;
+
+	int n;
+
+	size_t size;
+	struct isl_pw_qpolynomial_piece p[1];
+};
+
+$$$$$$$$$$$$$$$isl_polynomial_private.h:89 [isl_qpolynomial_fold]$$$$$$$$$$$$$$$
+struct isl_qpolynomial_fold {
+	int ref;
+
+	enum isl_fold type;
+	isl_space *dim;
+
+	isl_qpolynomial_list *list;
+};
+
+$$$$$$$$$$isl_polynomial_private.h:98 [isl_pw_qpolynomial_fold_piece]$$$$$$$$$$$
+struct isl_pw_qpolynomial_fold_piece {
+	struct isl_set *set;
+	struct isl_qpolynomial_fold *fold;
+};
+
+$$$$$$$$$$$$$isl_polynomial_private.h:103 [isl_pw_qpolynomial_fold]$$$$$$$$$$$$$
+struct isl_pw_qpolynomial_fold {
+	int ref;
+
+	enum isl_fold type;
+	isl_space *dim;
+
+	int n;
+
+	size_t size;
+	struct isl_pw_qpolynomial_fold_piece p[1];
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_printer.c:184 [isl_printer_ops]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_printer_ops {
+	__isl_give isl_printer *(*start_line)(__isl_take isl_printer *p);
+	__isl_give isl_printer *(*end_line)(__isl_take isl_printer *p);
+	__isl_give isl_printer *(*print_double)(__isl_take isl_printer *p,
+		double d);
+	__isl_give isl_printer *(*print_int)(__isl_take isl_printer *p, int i);
+	__isl_give isl_printer *(*print_isl_int)(__isl_take isl_printer *p,
+						isl_int i);
+	__isl_give isl_printer *(*print_str)(__isl_take isl_printer *p,
+						const char *s);
+	__isl_give isl_printer *(*flush)(__isl_take isl_printer *p);
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_printer_private.h:26 [isl_printer]$$$$$$$$$$$$$$$$$$$$$
+struct isl_printer {
+	struct isl_ctx	*ctx;
+	struct isl_printer_ops *ops;
+	FILE        	*file;
+	int		buf_n;
+	int		buf_size;
+	char		*buf;
+	int		indent;
+	int		output_format;
+	int		dump;
+	char		*indent_prefix;
+	char		*prefix;
+	char		*suffix;
+	int		width;
+
+	int			yaml_style;
+	int			yaml_depth;
+	int			yaml_size;
+	enum isl_yaml_state	*yaml_state;
+
+	isl_id_to_id	*notes;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_range.c:9 [range_data]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct range_data {
+	struct isl_bound	*bound;
+	int 		    	*signs;
+	int			sign;
+	int			test_monotonicity;
+	int		    	monotonicity;
+	int			tight;
+	isl_qpolynomial	    	*poly;
+	isl_pw_qpolynomial_fold *pwf;
+	isl_pw_qpolynomial_fold *pwf_tight;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_range.c:183 [isl_fixed_sign_data]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_fixed_sign_data {
+	int		*signs;
+	int		sign;
+	isl_qpolynomial	*poly;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_reordering.h:14 [isl_reordering]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_reordering {
+	int ref;
+	isl_space *space;
+	unsigned len;
+	int pos[1];
+};
+
+$$$$$$$$$$$$$$$$$$isl_sample.c:539 [isl_factored_sample_data]$$$$$$$$$$$$$$$$$$$
+struct isl_factored_sample_data {
+	isl_vec *sample;
+	int pos;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$isl_scan.c:19 [isl_counter]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_counter {
+	struct isl_scan_callback callback;
+	isl_int count;
+	isl_int max;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_scan.h:16 [isl_scan_callback]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_scan_callback {
+	isl_stat (*add)(struct isl_scan_callback *cb,
+		__isl_take isl_vec *sample);
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_schedule_band.c:578 [isl_not_data]$$$$$$$$$$$$$$$$$$$$$
+struct isl_not_data {
+	isl_bool (*is)(__isl_keep isl_set *set);
+};
+
+$$$$$$$$$$$$$$$$$$$isl_schedule_band.h:29 [isl_schedule_band]$$$$$$$$$$$$$$$$$$$
+struct isl_schedule_band {
+	int ref;
+
+	int n;
+	int *coincident;
+	int permutable;
+
+	isl_multi_union_pw_aff *mupa;
+
+	int anchored;
+	isl_union_set *ast_build_options;
+	enum isl_ast_loop_type *loop_type;
+	enum isl_ast_loop_type *isolate_loop_type;
+};
+
+$$$$$$$$$$$$isl_schedule_constraints.c:41 [isl_schedule_constraints]$$$$$$$$$$$$
+struct isl_schedule_constraints {
+	isl_union_set *domain;
+	isl_set *context;
+
+	isl_union_map *constraint[isl_edge_last + 1];
+};
+
+$$$$$$$isl_schedule_node.c:325 [isl_schedule_node_get_filter_prefix_data]$$$$$$$
+struct isl_schedule_node_get_filter_prefix_data {
+	int initialized;
+	int universe_domain;
+	int universe_filter;
+	int collect_prefix;
+	isl_union_set *filter;
+	isl_multi_union_pw_aff *prefix;
+};
+
+$$$$$$$$$$$isl_schedule_node.c:1337 [isl_schedule_node_preorder_data]$$$$$$$$$$$
+struct isl_schedule_node_preorder_data {
+	isl_bool (*fn)(__isl_keep isl_schedule_node *node, void *user);
+	void *user;
+};
+
+$$$$$$$$$$$$$$isl_schedule_node.c:1417 [isl_union_map_every_data]$$$$$$$$$$$$$$$
+struct isl_union_map_every_data {
+	isl_bool (*test)(__isl_keep isl_schedule_node *node, void *user);
+	void *user;
+	int failed;
+};
+
+$$$$$$$$$$isl_schedule_node.c:1464 [isl_schedule_node_postorder_data]$$$$$$$$$$$
+struct isl_schedule_node_postorder_data {
+	__isl_give isl_schedule_node *(*fn)(__isl_take isl_schedule_node *node,
+		void *user);
+	void *user;
+};
+
+$$$$$$$$$$$$$$$isl_schedule_node.c:2815 [isl_schedule_group_data]$$$$$$$$$$$$$$$
+struct isl_schedule_group_data {
+	int finished;
+
+	isl_union_map *expansion;
+	isl_union_pw_multi_aff *contraction;
+
+	isl_union_set *domain;
+	isl_union_set *domain_universe;
+	isl_union_set *group;
+	isl_union_set *group_universe;
+
+	int dim;
+	isl_multi_aff *sched;
+};
+
+$$$$$$$$$$$$$$$$$isl_schedule_node.c:3309 [isl_node_gist_data]$$$$$$$$$$$$$$$$$$
+struct isl_node_gist_data {
+	int n_expansion;
+	isl_union_set_list *filters;
+};
+
+$$$$$$$$$$$$$isl_schedule_node.c:3737 [isl_subtree_expansion_data]$$$$$$$$$$$$$$
+struct isl_subtree_expansion_data {
+	isl_union_map_list *expansions;
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$isl_schedule_node.c:3922 [isl_subtree_contraction_data]$$$$$$$$$$$$$
+struct isl_subtree_contraction_data {
+	isl_union_pw_multi_aff_list *contractions;
+	isl_union_pw_multi_aff *res;
+};
+
+$$$$$$$$$$$$$$isl_schedule_node.c:4694 [isl_schedule_expand_data]$$$$$$$$$$$$$$$
+struct isl_schedule_expand_data {
+	isl_schedule_tree *tree;
+	isl_union_set *domain;
+};
+
+$$$$$$$$$$$$$$$isl_schedule_node_private.h:24 [isl_schedule_node]$$$$$$$$$$$$$$$
+struct isl_schedule_node {
+	int ref;
+
+	isl_schedule *schedule;
+	isl_schedule_tree_list *ancestors;
+	int *child_pos;
+	isl_schedule_tree *tree;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_schedule_private.h:17 [isl_schedule]$$$$$$$$$$$$$$$$$$$$
+struct isl_schedule {
+	int ref;
+
+	isl_schedule_tree *root;
+
+	struct isl_schedule_tree *leaf;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_schedule_tree.h:54 [isl_schedule_tree]$$$$$$$$$$$$$$$$$$$
+struct isl_schedule_tree {
+	int ref;
+	isl_ctx *ctx;
+	int anchored;
+	enum isl_schedule_node_type type;
+	union {
+		isl_schedule_band *band;
+		isl_set *context;
+		isl_union_set *domain;
+		struct {
+			isl_union_pw_multi_aff *contraction;
+			isl_union_map *expansion;
+		};
+		isl_union_map *extension;
+		isl_union_set *filter;
+		isl_set *guard;
+		isl_id *mark;
+	};
+	isl_schedule_tree_list *children;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_scheduler.c:104 [isl_sched_node]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sched_node {
+	isl_space *space;
+	int	compressed;
+	isl_set	*hull;
+	isl_multi_aff *compress;
+	isl_pw_multi_aff *decompress;
+	isl_mat *sched;
+	isl_map *sched_map;
+	int	 rank;
+	isl_mat *indep;
+	isl_mat *vmap;
+	int	 start;
+	int	 nvar;
+	int	 nparam;
+
+	int	 scc;
+	int	 cluster;
+
+	int	*coincident;
+
+	isl_multi_val *sizes;
+	isl_basic_set *bounds;
+	isl_vec *max;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_scheduler.c:191 [isl_sched_edge]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sched_edge {
+	isl_map *map;
+	isl_union_map *tagged_condition;
+	isl_union_map *tagged_validity;
+
+	struct isl_sched_node *src;
+	struct isl_sched_node *dst;
+
+	unsigned types;
+
+	int start;
+	int end;
+
+	int no_merge;
+	int weight;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_scheduler.c:361 [isl_sched_graph]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sched_graph {
+	isl_map_to_basic_set *intra_hmap;
+	isl_map_to_basic_set *intra_hmap_param;
+	isl_map_to_basic_set *inter_hmap;
+
+	struct isl_sched_node *node;
+	int n;
+	int maxvar;
+	int max_row;
+	int n_row;
+
+	int *sorted;
+
+	int n_total_row;
+	int band_start;
+
+	struct isl_sched_graph *root;
+
+	struct isl_sched_edge *edge;
+	int n_edge;
+	int max_edge[isl_edge_last + 1];
+	struct isl_hash_table *edge_table[isl_edge_last + 1];
+
+	struct isl_hash_table *node_table;
+	struct isl_trivial_region *region;
+
+	isl_basic_set *lp;
+
+	int src_scc;
+	int dst_scc;
+
+	int scc;
+	int weak;
+
+	int max_weight;
+};
+
+$$$$$$$$$$$$$$$$$$isl_scheduler.c:1297 [isl_extract_edge_data]$$$$$$$$$$$$$$$$$$
+struct isl_extract_edge_data {
+	enum isl_edge_type type;
+	struct isl_sched_graph *graph;
+};
+
+$$$$$$$$$$$$$$$isl_scheduler.c:4166 [isl_exploit_lineality_data]$$$$$$$$$$$$$$$$
+struct isl_exploit_lineality_data {
+	isl_bool any_non_trivial;
+	isl_union_map *equivalent;
+	isl_union_set *mask;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_scheduler.c:4179 [isl_carry]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_carry {
+	isl_basic_set_list *intra;
+	isl_basic_set_list *inter;
+	struct isl_exploit_lineality_data lineality;
+};
+
+$$$$$$$$$$$$$$isl_scheduler.c:4251 [isl_add_all_constraints_data]$$$$$$$$$$$$$$$
+struct isl_add_all_constraints_data {
+	isl_ctx *ctx;
+	struct isl_sched_graph *graph;
+	int carry_inter;
+	int pos;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_scheduler.c:4337 [isl_sched_count]$$$$$$$$$$$$$$$$$$$$$
+struct isl_sched_count {
+	int n_eq;
+	int n_ineq;
+};
+
+$$$$$$$$$$$$$$$$$isl_scheduler.c:4893 [isl_collect_bounds_data]$$$$$$$$$$$$$$$$$
+struct isl_collect_bounds_data {
+	isl_ctx *ctx;
+	struct isl_sched_graph *graph;
+	isl_union_set *bounds;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_scheduler.c:5961 [isl_clustering]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_clustering {
+	int n;
+	struct isl_sched_graph *scc;
+	struct isl_sched_graph *cluster;
+	int *scc_cluster;
+	int *scc_node;
+	int *scc_in_merge;
+};
+
+$$$$$$$$$$$$$$$$isl_scheduler.c:6107 [isl_mark_merge_sccs_data]$$$$$$$$$$$$$$$$$
+struct isl_mark_merge_sccs_data {
+	struct isl_sched_graph *graph;
+	int *scc_cluster;
+	int src;
+	int dst;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_space_private.h:9 [isl_space]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_space {
+	int ref;
+
+	struct isl_ctx *ctx;
+
+	unsigned nparam;
+	unsigned n_in;		/* zero for sets */
+	unsigned n_out;		/* dim for sets */
+
+	isl_id *tuple_id[2];
+	isl_space *nested[2];
+
+	unsigned n_id;
+	isl_id **ids;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_stream.c:18 [isl_keyword]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_keyword {
+	char			*name;
+	enum isl_token_type	type;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_stream_private.h:5 [isl_token]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_token {
+	int type;
+
+	unsigned int on_new_line : 1;
+	unsigned is_keyword : 1;
+	int line;
+	int col;
+
+	union {
+		isl_int	v;
+		char	*s;
+		isl_map *map;
+		isl_pw_aff *pwaff;
+	} u;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_stream_private.h:41 [isl_stream]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_stream {
+	struct isl_ctx	*ctx;
+	FILE        	*file;
+	const char  	*str;
+	int	    	line;
+	int	    	col;
+	int		start_line;
+	int		start_col;
+	int		last_line;
+	int	    	eof;
+
+	char	    	*buffer;
+	size_t	    	size;
+	size_t	    	len;
+	int	    	c;
+	int		un[5];
+	int		n_un;
+
+	struct isl_token	*tokens[5];
+	int	    	n_token;
+
+	struct isl_hash_table	*keywords;
+	enum isl_token_type	 next_type;
+
+	int			yaml_depth;
+	int			yaml_size;
+	enum isl_yaml_state	*yaml_state;
+	int			*yaml_indent;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_stride.c:20 [isl_stride_info]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_stride_info {
+	isl_val *stride;
+	isl_aff *offset;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_stride.c:108 [isl_detect_stride_data]$$$$$$$$$$$$$$$$$$$$
+struct isl_detect_stride_data {
+	int pos;
+	int want_offset;
+	int found;
+	isl_val *stride;
+	isl_aff *offset;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_tab.h:19 [isl_tab_var]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_tab_var {
+	int index;
+	unsigned is_row : 1;
+	unsigned is_nonneg : 1;
+	unsigned is_zero : 1;
+	unsigned is_redundant : 1;
+	unsigned marked : 1;
+	unsigned frozen : 1;
+	unsigned negated : 1;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_tab.h:50 [isl_tab_callback]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_tab_callback {
+	isl_stat (*run)(struct isl_tab_callback *cb);
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$isl_tab.h:61 [isl_tab_undo]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_tab_undo {
+	enum isl_tab_undo_type	type;
+	union isl_tab_undo_val	u;
+	struct isl_tab_undo	*next;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_tab.h:134 [isl_tab]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_tab {
+	struct isl_mat *mat;
+
+	unsigned n_row;
+	unsigned n_col;
+	unsigned n_dead;
+	unsigned n_redundant;
+
+	unsigned n_var;
+	unsigned n_param;
+	unsigned n_div;
+	unsigned max_var;
+	unsigned n_con;
+	unsigned n_eq;
+	unsigned max_con;
+	struct isl_tab_var *var;
+	struct isl_tab_var *con;
+	int *row_var;	/* v >= 0 -> var v;	v < 0 -> con ~v */
+	int *col_var;	/* v >= 0 -> var v;	v < 0 -> con ~v */
+	enum isl_tab_row_sign *row_sign;
+
+	struct isl_tab_undo bottom;
+	struct isl_tab_undo *top;
+
+	struct isl_vec *dual;
+	struct isl_basic_map *bmap;
+
+	unsigned n_sample;
+	unsigned n_outside;
+	int *sample_index;
+	struct isl_mat *samples;
+
+	int n_zero;
+	int n_unbounded;
+	struct isl_mat *basis;
+
+	int (*conflict)(int con, void *user);
+	void *conflict_user;
+
+	unsigned strict_redundant : 1;
+	unsigned need_undo : 1;
+	unsigned preserve : 1;
+	unsigned rational : 1;
+	unsigned empty : 1;
+	unsigned in_undo : 1;
+	unsigned M : 1;
+	unsigned cone : 1;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_tab.h:268 [isl_trivial_region]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_trivial_region {
+	int pos;
+	isl_mat *trivial;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:68 [isl_context_op]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_context_op {
+	/* detect nonnegative parameters in context and mark them in tab */
+	struct isl_tab *(*detect_nonnegative_parameters)(
+			struct isl_context *context, struct isl_tab *tab);
+	/* return temporary reference to basic set representation of context */
+	struct isl_basic_set *(*peek_basic_set)(struct isl_context *context);
+	/* return temporary reference to tableau representation of context */
+	struct isl_tab *(*peek_tab)(struct isl_context *context);
+	/* add equality; check is 1 if eq may not be valid;
+	 * update is 1 if we may want to call ineq_sign on context later.
+	 */
+	void (*add_eq)(struct isl_context *context, isl_int *eq,
+			int check, int update);
+	/* add inequality; check is 1 if ineq may not be valid;
+	 * update is 1 if we may want to call ineq_sign on context later.
+	 */
+	void (*add_ineq)(struct isl_context *context, isl_int *ineq,
+			int check, int update);
+	/* check sign of ineq based on previous information.
+	 * strict is 1 if saturation should be treated as a positive sign.
+	 */
+	enum isl_tab_row_sign (*ineq_sign)(struct isl_context *context,
+			isl_int *ineq, int strict);
+	/* check if inequality maintains feasibility */
+	int (*test_ineq)(struct isl_context *context, isl_int *ineq);
+	/* return index of a div that corresponds to "div" */
+	int (*get_div)(struct isl_context *context, struct isl_tab *tab,
+			struct isl_vec *div);
+	/* insert div "div" to context at "pos" and return non-negativity */
+	isl_bool (*insert_div)(struct isl_context *context, int pos,
+		__isl_keep isl_vec *div);
+	int (*detect_equalities)(struct isl_context *context,
+			struct isl_tab *tab);
+	/* return row index of "best" split */
+	int (*best_split)(struct isl_context *context, struct isl_tab *tab);
+	/* check if context has already been determined to be empty */
+	int (*is_empty)(struct isl_context *context);
+	/* check if context is still usable */
+	int (*is_ok)(struct isl_context *context);
+	/* save a copy/snapshot of context */
+	void *(*save)(struct isl_context *context);
+	/* restore saved context */
+	void (*restore)(struct isl_context *context, void *);
+	/* discard saved context */
+	void (*discard)(void *);
+	/* invalidate context */
+	void (*invalidate)(struct isl_context *context);
+	/* free context */
+	__isl_null struct isl_context *(*free)(struct isl_context *context);
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:124 [isl_context]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_context {
+	struct isl_context_op *op;
+	int n_unknown;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:129 [isl_context_lex]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_context_lex {
+	struct isl_context context;
+	struct isl_tab *tab;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:141 [isl_partial_sol]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_partial_sol {
+	int level;
+	struct isl_basic_set *dom;
+	isl_multi_aff *ma;
+
+	struct isl_partial_sol *next;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:150 [isl_sol_callback]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sol_callback {
+	struct isl_tab_callback callback;
+	struct isl_sol *sol;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:182 [isl_sol]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sol {
+	int error;
+	int rational;
+	int level;
+	int max;
+	isl_size n_out;
+	isl_space *space;
+	struct isl_context *context;
+	struct isl_partial_sol *partial;
+	void (*add)(struct isl_sol *sol,
+		__isl_take isl_basic_set *dom, __isl_take isl_multi_aff *ma);
+	void (*add_empty)(struct isl_sol *sol, struct isl_basic_set *bset);
+	void (*free)(struct isl_sol *sol);
+	struct isl_sol_callback	dec_level;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:761 [isl_sol_map]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sol_map {
+	struct isl_sol	sol;
+	struct isl_map	*map;
+	struct isl_set	*empty;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:2880 [isl_context_gbr]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_context_gbr {
+	struct isl_context context;
+	struct isl_tab *tab;
+	struct isl_tab *shifted;
+	struct isl_tab *cone;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:3489 [isl_gbr_tab_undo]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_gbr_tab_undo {
+	struct isl_tab_undo *tab_snap;
+	struct isl_tab_undo *shifted_snap;
+	struct isl_tab_undo *cone_snap;
+};
+
+$$$$$$$$$$$$$$$$$isl_tab_pip.c:4560 [isl_constraint_equal_info]$$$$$$$$$$$$$$$$$
+struct isl_constraint_equal_info {
+	unsigned n_in;
+	unsigned n_out;
+	isl_int *val;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:5054 [isl_lexmin_data]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_lexmin_data {
+	int n_op;
+	int n_region;
+	struct isl_trivial_region *region;
+
+	struct isl_tab *tab;
+	struct isl_local_region *local;
+	isl_vec *v;
+
+	isl_vec *sol;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:5224 [isl_local_region]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_local_region {
+	int update;
+	int n_zero;
+	int region;
+	int side;
+	int n;
+	struct isl_tab_undo *snap;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:5554 [isl_tab_lexmin]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_tab_lexmin {
+	isl_ctx *ctx;
+	struct isl_tab *tab;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$isl_tab_pip.c:5663 [isl_sol_pma]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_sol_pma {
+	struct isl_sol	sol;
+	isl_pw_multi_aff *pma;
+	isl_set *empty;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_tarjan.h:10 [isl_tarjan_node]$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_tarjan_node {
+	int index;
+	int min_index;
+	int on_stack;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$isl_tarjan.h:26 [isl_tarjan_graph]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_tarjan_graph {
+	int len;
+	struct isl_tarjan_node *node;
+	int *stack;
+	int sp;
+	int index;
+	int *order;
+	int op;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$isl_test.c:3224 [must_may]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct must_may {
+	isl_map *must;
+	isl_map *may;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_test.c:9538 [isl_test_codegen_data]$$$$$$$$$$$$$$$$$$$$$
+struct isl_test_codegen_data {
+	int depth;
+	int before;
+	int after;
+};
+
+$$$$$$$$$$$$$$isl_transitive_closure.c:1773 [isl_tc_follows_data]$$$$$$$$$$$$$$$
+struct isl_tc_follows_data {
+	isl_basic_map **list;
+	int check_closed;
+};
+
+$$$$$$$$$$$$$$$$isl_transitive_closure.c:2880 [isl_union_power]$$$$$$$$$$$$$$$$$
+struct isl_union_power {
+	isl_union_map *pow;
+	isl_bool *exact;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_union_map.c:259 [isl_union_align]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_union_align {
+	isl_reordering *exp;
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$$$$$$isl_union_map.c:604 [isl_union_map_every_data]$$$$$$$$$$$$$$$$$
+struct isl_union_map_every_data {
+	isl_bool (*test)(__isl_keep isl_map *map, void *user);
+	void *user;
+	int failed;
+};
+
+$$$$$$$$$$$$$$$$isl_union_map.c:831 [isl_test_set_from_map_data]$$$$$$$$$$$$$$$$
+struct isl_test_set_from_map_data {
+	isl_bool (*test)(__isl_keep isl_set *set, void *user);
+	void *user;
+};
+
+$$$$$$$$$$$$$isl_union_map.c:857 [isl_union_set_foreach_point_data]$$$$$$$$$$$$$
+struct isl_union_set_foreach_point_data {
+	isl_stat (*fn)(__isl_take isl_point *pnt, void *user);
+	void *user;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_union_map.c:897 [isl_bin_op_control]$$$$$$$$$$$$$$$$$$$$
+struct isl_bin_op_control {
+	int subtract;
+	isl_bool (*filter)(__isl_keep isl_map *map);
+	__isl_give isl_space *(*match_space)(__isl_take isl_space *space);
+	__isl_give isl_map *(*fn_map)(__isl_take isl_map *map1,
+		__isl_take isl_map *map2);
+};
+
+$$$$$$$$$$$$$$$$isl_union_map.c:910 [isl_union_map_gen_bin_data]$$$$$$$$$$$$$$$$
+struct isl_union_map_gen_bin_data {
+	struct isl_bin_op_control *control;
+	isl_union_map *umap2;
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$$isl_union_map.c:1070 [isl_union_map_gen_bin_set_data]$$$$$$$$$$$$$$
+struct isl_union_map_gen_bin_set_data {
+	isl_set *set;
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$$$isl_union_map.c:1166 [isl_union_map_match_bin_data]$$$$$$$$$$$$$$$
+struct isl_union_map_match_bin_data {
+	isl_union_map *umap2;
+	isl_union_map *res;
+	__isl_give isl_map *(*fn)(__isl_take isl_map*, __isl_take isl_map*);
+};
+
+$$$$$$$$$$$$$$$$$isl_union_map.c:1565 [isl_union_map_bin_data]$$$$$$$$$$$$$$$$$$
+struct isl_union_map_bin_data {
+	isl_union_map *umap2;
+	isl_union_map *res;
+	isl_map *map;
+	isl_stat (*fn)(void **entry, void *user);
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_union_map.c:1883 [isl_un_op_control]$$$$$$$$$$$$$$$$$$$$
+struct isl_un_op_control {
+	int inplace;
+	int total;
+	isl_bool (*filter)(__isl_keep isl_map *map, void *user);
+	void *filter_user;
+	__isl_give isl_map *(*fn_map)(__isl_take isl_map *map);
+	__isl_give isl_map *(*fn_map2)(__isl_take isl_map *map, void *user);
+	void *fn_map2_user;
+};
+
+$$$$$$$$$$$$$$$$isl_union_map.c:1896 [isl_un_op_drop_user_data]$$$$$$$$$$$$$$$$$
+struct isl_un_op_drop_user_data {
+	isl_bool (*filter)(__isl_keep isl_map *map);
+};
+
+$$$$$$$$$$$$$$$$$$isl_union_map.c:1914 [isl_union_map_un_data]$$$$$$$$$$$$$$$$$$
+struct isl_union_map_un_data {
+	struct isl_un_op_control *control;
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$$$isl_union_map.c:2547 [isl_union_map_is_subset_data]$$$$$$$$$$$$$$$
+struct isl_union_map_is_subset_data {
+	isl_union_map *umap2;
+	isl_bool is_subset;
+};
+
+$$$$$$$$$$$$$isl_union_map.c:2648 [isl_union_map_is_disjoint_data]$$$$$$$$$$$$$$
+struct isl_union_map_is_disjoint_data {
+	isl_union_map *umap2;
+	isl_bool is_disjoint;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_union_map.c:2767 [isl_forall_data]$$$$$$$$$$$$$$$$$$$$$
+struct isl_forall_data {
+	isl_bool res;
+	isl_bool (*fn)(__isl_keep isl_map *map);
+};
+
+$$$$$$$$$$$$$$$$$$isl_union_map.c:2802 [isl_forall_user_data]$$$$$$$$$$$$$$$$$$$
+struct isl_forall_user_data {
+	isl_bool res;
+	isl_bool (*fn)(__isl_keep isl_map *map, void *user);
+	void *user;
+};
+
+$$$$$$$$$$$$$$$$isl_union_map.c:2906 [isl_union_map_is_sv_data]$$$$$$$$$$$$$$$$$
+struct isl_union_map_is_sv_data {
+	isl_union_map *umap;
+	isl_bool sv;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_union_map.c:3098 [isl_fixed_map]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_fixed_map {
+	isl_int v;
+	isl_map *map;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_union_map.c:3144 [isl_fixed_dim_data]$$$$$$$$$$$$$$$$$$$$
+struct isl_fixed_dim_data {
+	struct isl_fixed_map *v;
+	int n;
+	int pos;
+};
+
+$$$$$$$$$$$$$$$isl_union_map.c:3510 [isl_union_map_preimage_data]$$$$$$$$$$$$$$$
+struct isl_union_map_preimage_data {
+	isl_space *space;
+	isl_pw_multi_aff *pma;
+	isl_union_map *res;
+	int (*match)(__isl_keep isl_map *map, __isl_keep isl_space *space);
+	__isl_give isl_map *(*fn)(__isl_take isl_map *map,
+		__isl_take isl_pw_multi_aff *pma);
+};
+
+$$$$$$$$$$$$$isl_union_map.c:3685 [isl_union_map_preimage_mpa_data]$$$$$$$$$$$$$
+struct isl_union_map_preimage_mpa_data {
+	isl_space *space;
+	isl_multi_pw_aff *mpa;
+	isl_union_map *res;
+	int (*match)(__isl_keep isl_map *map, __isl_keep isl_space *space);
+	__isl_give isl_map *(*fn)(__isl_take isl_map *map,
+		__isl_take isl_multi_pw_aff *mpa);
+};
+
+$$$$$$$$$$$$isl_union_map.c:3790 [isl_union_map_preimage_upma_data]$$$$$$$$$$$$$
+struct isl_union_map_preimage_upma_data {
+	isl_union_map *umap;
+	isl_union_map *res;
+	__isl_give isl_union_map *(*fn)(__isl_take isl_union_map *umap,
+		__isl_take isl_pw_multi_aff *pma);
+};
+
+$$$$$$$$$$$$$isl_union_map.c:3933 [isl_union_map_project_out_data]$$$$$$$$$$$$$$
+struct isl_union_map_project_out_data {
+	enum isl_dim_type type;
+	unsigned first;
+	unsigned n;
+
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$isl_union_map.c:4014 [isl_union_map_involves_dims_data]$$$$$$$$$$$$$
+struct isl_union_map_involves_dims_data {
+	unsigned first;
+	unsigned n;
+};
+
+$$$$$$$$$$isl_union_map.c:4058 [isl_union_map_reset_range_space_data]$$$$$$$$$$$
+struct isl_union_map_reset_range_space_data {
+	isl_space *range;
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$$isl_union_map.c:4125 [isl_union_map_reset_params_data]$$$$$$$$$$$$$
+struct isl_union_map_reset_params_data {
+	isl_space *space;
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$$$$$$isl_union_map.c:4189 [isl_union_order_at_data]$$$$$$$$$$$$$$$$$
+struct isl_union_order_at_data {
+	isl_multi_union_pw_aff *mupa;
+	__isl_give isl_map *(*order)(__isl_take isl_multi_pw_aff *mpa1,
+		__isl_take isl_multi_pw_aff *mpa2);
+	isl_union_map *res;
+};
+
+$$$$$$$$$$$$isl_union_map.c:4447 [isl_union_map_remove_map_if_data]$$$$$$$$$$$$$
+struct isl_union_map_remove_map_if_data {
+	isl_bool (*fn)(__isl_keep isl_map *map, void *user);
+	void *user;
+};
+
+$$$$$$$$$$$$$$$$$$$isl_union_map_private.h:6 [isl_union_map]$$$$$$$$$$$$$$$$$$$$
+struct isl_union_map {
+	int ref;
+	isl_space *dim;
+
+	struct isl_hash_table	table;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$isl_union_multi.c:37 [UNION]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct UNION {
+	int ref;
+	isl_space *space;
+
+	struct isl_hash_table	table;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_union_single.c:21 [UNION]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct UNION {
+	int ref;
+#ifdef HAS_TYPE
+	enum isl_fold type;
+#endif
+	isl_space *space;
+
+	struct isl_hash_table	table;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_val_private.h:17 [isl_val]$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_val {
+	int ref;
+	isl_ctx *ctx;
+
+	isl_int n;
+	isl_int d;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$isl_vec_private.h:7 [isl_vec]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_vec {
+	int ref;
+
+	struct isl_ctx *ctx;
+
+	unsigned size;
+	isl_int *el;
+
+	struct isl_blk block;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_vertices.c:66 [isl_vertex_list]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_vertex_list {
+	struct isl_vertex v;
+	struct isl_vertex_list *next;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_vertices.c:550 [isl_chamber_list]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_chamber_list {
+	struct isl_chamber c;
+	struct isl_chamber_list *next;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_vertices.c:720 [isl_facet_todo]$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_facet_todo {
+	struct isl_tab *tab;	/* A tableau representation of the facet */
+	isl_basic_set *bset;    /* A normalized basic set representation */
+	isl_vec *constraint;	/* Constraint pointing to the other side */
+	struct isl_facet_todo *next;
+};
+
+$$$$$$$$$$$$$$$$$$$$$isl_vertices_private.h:20 [isl_vertex]$$$$$$$$$$$$$$$$$$$$$
+struct isl_vertex {
+	isl_basic_set *dom;
+	isl_basic_set *vertex;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_vertices_private.h:28 [isl_chamber]$$$$$$$$$$$$$$$$$$$$$
+struct isl_chamber {
+	int n_vertices;
+	int *vertices;
+	isl_basic_set *dom;
+};
+
+$$$$$$$$$$$$$$$$$$$$isl_vertices_private.h:34 [isl_vertices]$$$$$$$$$$$$$$$$$$$$
+struct isl_vertices {
+	int ref;
+
+	/* The rational basic set spanned by the vertices. */
+	isl_basic_set *bset;
+
+	int n_vertices;
+	struct isl_vertex *v;
+
+	int n_chambers;
+	struct isl_chamber *c;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$isl_vertices_private.h:47 [isl_cell]$$$$$$$$$$$$$$$$$$$$$$
+struct isl_cell {
+	int n_vertices;
+	int *ids;
+	isl_vertices *vertices;
+	isl_basic_set *dom;
+};
+
+$$$$$$$$$$$$$$$$isl_vertices_private.h:54 [isl_external_vertex]$$$$$$$$$$$$$$$$$
+struct isl_external_vertex {
+	isl_vertices *vertices;
+	int id;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$obj.h:15 [isl_obj_vtable]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_obj_vtable {
+	void *(*copy)(void *v1);
+	void *(*add)(void *v1, void *v2);
+	__isl_give isl_printer *(*print)(__isl_take isl_printer *p, void *v);
+	void (*free)(void *v);
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$obj.h:48 [isl_obj]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_obj {
+	isl_obj_type	type;
+	void		*v;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$pip.c:42 [options]$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct options {
+	struct isl_options	*isl;
+	unsigned		 verify;
+	unsigned		 format;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$$$pip.c:241 [isl_scan_pip]$$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct isl_scan_pip {
+	struct isl_scan_callback callback;
+	isl_basic_set *bset;
+	isl_set *sol;
+	isl_set *empty;
+	int stride;
+	int n;
+	int max;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$polytope_scan.c:26 [scan_samples]$$$$$$$$$$$$$$$$$$$$$$$$
+struct scan_samples {
+	struct isl_scan_callback callback;
+	struct isl_mat *samples;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$$schedule_cmp.c:15 [options]$$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct options {
+	struct isl_options *isl;
+	char *schedule1;
+	char *schedule2;
+};
+
+$$$$$$$$$$$$$$$set_lang_defaults_arg4.h:10 [setLangDefaultsArg4]$$$$$$$$$$$$$$$$
+struct setLangDefaultsArg4 {
+	setLangDefaultsArg4(clang::PreprocessorOptions &PO) : PO(PO) {}
+	operator clang::PreprocessorOptions &() { return PO; }
+	operator std::vector<std::string> &() { return PO.Includes; }
+
+	clang::PreprocessorOptions &PO;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$$$template_cpp.h:40 [TupleKind]$$$$$$$$$$$$$$$$$$$$$$$$$$
+struct TupleKind {
+	TupleKind(const std::string &name) : name(name) {}
+
+	virtual std::string to_string() const;
+	virtual std::vector<std::string> params() const;
+	virtual TupleKindPtr apply(const Substitution &subs,
+		const TupleKindPtr &self) const;
+	virtual TupleKindPtr left() const;
+	virtual TupleKindPtr right() const;
+
+	const std::string name;
+};
+
+$$$$$$$$$$$$$$$$$$$$$$$template_cpp.h:77 [template_class]$$$$$$$$$$$$$$$$$$$$$$$
+struct template_class {
+	const std::string class_name;
+	const std::string super_name;
+	const isl_class &clazz;
+
+	std::vector<Kind> class_tuples;
+
+	bool is_anon() const;
+	bool is_anon_set() const;
+	void add_specialization(const Kind &kind);
+};
